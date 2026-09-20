@@ -1,0 +1,9 @@
+{
+  "rewrites": [
+    { "source": "/client-checkin.html", "destination": "https://nk-coaching-real-1phynsur1-nk-0be8.vercel.app/client-checkin.html" },
+    { "source": "/pack.html", "destination": "https://nk-coaching-real-hi97skkrm-nk-0be8.vercel.app/pack.html" },
+    { "source": "/pack-order.html", "destination": "https://nk-coaching-real-p8rxaar9c-nk-0be8.vercel.app/pack-order.html" },
+    { "source": "/icon-192.png", "destination": "https://nk-coaching-real-re17o2559-nk-0be8.vercel.app/icon-192.png" },
+    { "source": "/apple-touch-icon.png", "destination": "https://nk-coaching-real-re17o2559-nk-0be8.vercel.app/apple-touch-icon.png" }
+  ]
+}
