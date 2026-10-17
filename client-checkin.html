@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>NT Coaching — Check-In</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+  :root{ --bg:#080b11; --panel:#121826; --ink:#eef2f7; --muted:#8b95a3; --line:rgba(255,255,255,0.07);
+    --accent:#0a6cf8; --accent2:#3d8bff; --good:#0a7d4f; --warn:#9a6b00; --crit:#c0392b; }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{background:var(--bg);color:var(--ink);font-family:"Segoe UI",-apple-system,Roboto,Arial,sans-serif;line-height:1.5}
+  body{padding-bottom:84px}
+  img{max-width:100%}
+  .wrap{max-width:620px;margin:0 auto;padding:0 14px}
+  .topbar{background:linear-gradient(135deg,#000,#0a0f18);border-bottom:1px solid var(--line);padding:14px 0}
+  .topbar .wrap{display:flex;align-items:center;gap:12px}
+  .topbar img{height:38px;width:auto}
+  .tb-txt .biz{font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent2);font-weight:700}
+  .tb-txt .hi{font-size:17px;font-weight:800;margin-top:1px}
+  .chip{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;border:1px solid var(--line)}
+  .chip.good{background:rgba(10,125,79,.15);color:#5fd3a3;border-color:rgba(10,125,79,.4)}
+  .chip.warn{background:rgba(240,165,0,.12);color:#f0c15a;border-color:rgba(240,165,0,.35)}
+  h1{font-size:22px;font-weight:800;margin:18px 0 2px;letter-spacing:-.3px}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:14px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:15px 16px;margin-bottom:12px}
+  .card h3{font-size:14px;font-weight:800;margin-bottom:8px}
+  .tiles{display:flex;gap:9px;margin:4px 0 14px}
+  .tile{flex:1;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 6px;text-align:center}
+  .tile.cal{background:linear-gradient(135deg,#0047d6,var(--accent));border-color:rgba(58,139,255,.5)}
+  .tile .v{font-size:19px;font-weight:800}.tile .l{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-top:3px}
+  .tile.cal .l{color:#dbe7ff}
+  .mc{border-left:4px solid var(--accent);padding-left:11px;margin-bottom:10px}
+  .mc .n{font-size:13.5px;font-weight:700}.mc .i{font-size:12px;color:#c7cfda;margin:2px 0 5px}
+  .macros{font-size:11px;color:var(--muted);font-weight:600}
+  .btn{display:block;width:100%;text-align:center;border:none;border-radius:11px;padding:13px;font-size:14px;font-weight:800;cursor:pointer;background:linear-gradient(135deg,#0047d6,var(--accent));color:#fff;margin-top:4px}
+  .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink)}
+  .btn.pdf{background:rgba(10,108,248,.14);border:1px solid rgba(58,139,255,.4);color:#9cc0ff}
+  a.btn{text-decoration:none}
+  label.fl{display:block;font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);font-weight:700;margin:12px 0 5px}
+  input,textarea,select{width:100%;background:#0c111b;border:1px solid var(--line);border-radius:10px;color:var(--ink);padding:12px;font-size:15px;font-family:inherit}
+  textarea{min-height:70px;resize:vertical}
+  .scale{display:flex;gap:7px}
+  .scale button{flex:1;background:#0c111b;border:1px solid var(--line);border-radius:10px;color:var(--muted);padding:11px 0;font-size:15px;font-weight:700;cursor:pointer}
+  .scale button.sel{background:var(--accent);border-color:var(--accent);color:#fff}
+  .exrow{display:flex;justify-content:space-between;font-size:13px;padding:7px 0;border-bottom:1px solid var(--line)}
+  .exrow:last-child{border-bottom:none}.exrow .sr{color:var(--muted);font-weight:600}
+  .cardio{font-size:12px;color:#f0a500;font-weight:600;margin-bottom:6px}
+  .ci{display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:9px 0;border-bottom:1px solid var(--line)}
+  .ci:last-child{border-bottom:none}
+  .ci .d{font-weight:700}.ci .w{color:var(--accent2);font-weight:800}
+  .bub{max-width:78%;padding:9px 13px;border-radius:14px;margin-bottom:8px;font-size:14px;clear:both;word-wrap:break-word}
+  .bub.coach{background:var(--panel);border:1px solid var(--line);float:left;border-bottom-left-radius:4px}
+  .bub.client{background:linear-gradient(135deg,#0047d6,var(--accent));color:#fff;float:right;border-bottom-right-radius:4px}
+  .thread{overflow:hidden;margin-bottom:12px}
+  .inrow{display:flex;gap:8px}.inrow input{flex:1}.inrow .btn{width:auto;margin:0;padding:12px 18px}
+  .gallery{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .gallery figure{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .gallery img{width:100%;height:150px;object-fit:cover;display:block}
+  .gallery figcaption{font-size:11px;color:var(--muted);padding:6px 8px}
+  .logset{display:flex;gap:7px;align-items:center;margin:5px 0}
+  .logset input{padding:9px}.logset .lbl{font-size:12px;color:var(--muted);min-width:14px}
+  .exblock{margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+  .exblock .en{font-size:13.5px;font-weight:700;margin-bottom:4px}
+  .empty{color:var(--muted);font-size:13px;text-align:center;padding:22px 10px}
+  .prbadge{font-size:10px;font-weight:800;color:#5fd3a3;background:rgba(10,125,79,.16);border-radius:6px;padding:1px 6px;margin-left:6px}
+  .tabbar{position:fixed;left:0;right:0;bottom:0;background:#0a0f18;border-top:1px solid var(--line);display:flex;padding:6px 4px 10px;z-index:50}
+  .tabbar button{flex:1;background:none;border:none;color:var(--muted);font-size:10px;font-weight:700;padding:5px 0;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px}
+  .tabbar button.sel{color:var(--accent2)}
+  .tabbar .ic{font-size:18px;line-height:1}
+  .toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:#0a0f18;border:1px solid var(--accent);color:#fff;padding:11px 18px;border-radius:12px;font-size:13px;font-weight:600;z-index:100;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90%;text-align:center}
+  .toast.show{opacity:1}
+  .center{min-height:70vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:10px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div id="app"><div class="center">Loading…</div></div>
+<div id="toast" class="toast"></div>
+<script>
+(function(){
+  const SB_URL="https://uftjzxofhrntrwlrecvw.supabase.co";
+  const SB_KEY="sb_publishable_jQMNWo8T6cPd9bNsQebJMQ_GgMTk1-W";
+  const sb = supabase.createClient(SB_URL, SB_KEY);
+  const app = document.getElementById('app');
+  const toastEl = document.getElementById('toast');
+  let code = new URLSearchParams(location.search).get('code');
+  let me=null, plan=null, view={tab:'plan'};
+  let ci={strength:0,hunger:0,energy:0};
+
+  const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const ACCENTS={blue:'#0a6cf8',ocean:'#0a6cf8',green:'#0a9d5a',emerald:'#0a9d5a',red:'#e0453a',crimson:'#e0453a',purple:'#7a5cff',violet:'#7a5cff',orange:'#f0820a',gold:'#f0a500',teal:'#0ab5a0',pink:'#e05a9c'};
+  function applyAccent(id){const c=ACCENTS[(id||'').toLowerCase()];if(c){document.documentElement.style.setProperty('--accent',c);document.documentElement.style.setProperty('--accent2',c);}}
+  function toast(m){toastEl.textContent=m;toastEl.classList.add('show');setTimeout(()=>toastEl.classList.remove('show'),2600);}
+  function fmtDate(d){try{return new Date(d+ (String(d).length<=10?'T00:00:00':'')).toLocaleDateString([], {month:'short',day:'numeric'});}catch(e){return d;}}
+
+  async function rpc(fn,args){const {data,error}=await sb.rpc(fn,args);if(error)throw error;return data;}
+
+  async function boot(){
+    if(!code){app.innerHTML='<div class="center"><div style="font-size:40px">🔒</div><h1>Missing invite code</h1><div class="sub">Open the link your coach sent you — it should end in <b>?code=…</b></div></div>';return;}
+    try{
+      const rows=await rpc('client_portal_lookup',{p_code:code});
+      me=Array.isArray(rows)?rows[0]:rows;
+    }catch(e){me=null;}
+    if(!me){app.innerHTML='<div class="center"><div style="font-size:40px">⚠️</div><h1>Link not found</h1><div class="sub">This invite link isn’t active. Ask your coach to resend it.</div></div>';return;}
+    applyAccent(me.accent_id);
+    try{ plan=await rpc('client_portal_plan',{p_code:code}); }catch(e){ plan=null; }
+    render();
+  }
+
+  function topbar(){
+    const stat = me.account_status==='active'
+      ? '<span class="chip good">Active</span>'
+      : '<span class="chip warn">Welcome — first check-in activates you</span>';
+    const first = (me.name||'there').split(' ')[0];
+    return `<div class="topbar"><div class="wrap">
+      <img src="/nt-training-logo.webp" alt="NT" onerror="this.style.display='none'">
+      <div class="tb-txt"><div class="biz">${esc(me.business_name||'NT Coaching')}</div>
+      <div class="hi">Hey ${esc(first)} 👋</div></div>
+      <div style="margin-left:auto">${stat}</div>
+    </div></div>`;
+  }
+
+  function tabbar(){
+    const t=(id,ic,lab)=>`<button data-tab="${id}" class="${view.tab===id?'sel':''}"><span class="ic">${ic}</span>${lab}</button>`;
+    return `<div class="tabbar">
+      ${t('plan','📋','Plan')}${t('checkin','✅','Check-In')}${t('progress','📈','Progress')}
+      ${t('workout','🏋️','Log')}${t('messages','💬','Coach')}${t('community','👥','Group')}</div>`;
+  }
+
+  // ---------- PLAN ----------
+  function planView(){
+    let h='<h1>Your Plan</h1><div class="sub">Everything your coach has set for you.</div>';
+    const mp = plan&&plan.meal_plan;
+    if(mp){
+      h+=`<div class="tiles">
+        <div class="tile cal"><div class="v">${mp.target_calories||'—'}</div><div class="l">Cals</div></div>
+        <div class="tile"><div class="v">${mp.target_protein||'—'}g</div><div class="l">Protein</div></div>
+        <div class="tile"><div class="v">${mp.target_fat||'—'}g</div><div class="l">Fat</div></div>
+        <div class="tile"><div class="v">${mp.target_carbs||'—'}g</div><div class="l">Carbs</div></div></div>`;
+      if(plan.meal_pdf_url) h+=`<a class="btn pdf" href="${esc(plan.meal_pdf_url)}" target="_blank">📄 View Meal Plan PDF</a>`;
+      if((mp.meals||[]).length){ h+='<div class="card"><h3>Meals</h3>';
+        mp.meals.forEach(m=>{h+=`<div class="mc"><div class="n">${esc(m.name)}</div>${m.items_text?`<div class="i">${esc(m.items_text)}</div>`:''}<div class="macros">${m.calories?m.calories+' kcal · ':''}P ${m.protein||0} · F ${m.fat||0} · C ${m.carbs||0}</div></div>`;});
+        h+='</div>';}
+    } else if(plan&&plan.meal_pdf_url){
+      h+=`<a class="btn pdf" href="${esc(plan.meal_pdf_url)}" target="_blank">📄 View Meal Plan PDF</a>`;
+    }
+    const w = plan&&plan.workout;
+    if(plan&&plan.workout_pdf_url) h+=`<a class="btn pdf" style="margin-top:10px" href="${esc(plan.workout_pdf_url)}" target="_blank">📄 View Training Plan PDF</a>`;
+    if(w){
+      h+=`<div class="card" style="margin-top:12px"><h3>${esc(w.name||'Training')}</h3>`;
+      if(w.summary) h+=`<div class="i" style="font-size:12px;color:#c7cfda;margin-bottom:8px">${esc(w.summary)}</div>`;
+      (w.days||[]).forEach(d=>{
+        h+=`<div class="mc" style="margin-top:10px"><div class="n">${esc(d.name)}</div>`;
+        if(d.cardio) h+=`<div class="cardio">${esc(d.cardio)}</div>`;
+        (d.exercises||[]).forEach(e=>{h+=`<div class="exrow"><span>${esc(e.name)}</span><span class="sr">${esc(e.sets_reps||'')}</span></div>`;});
+        h+='</div>';
+      });
+      h+='</div>';
+    }
+    if(!mp && !(plan&&plan.meal_pdf_url) && !w && !(plan&&plan.workout_pdf_url))
+      h+='<div class="empty">Your coach is putting your plan together — check back soon.</div>';
+    return h;
+  }
+
+  // ---------- CHECK-IN ----------
+  function checkinView(){
+    const scale=(key,lab)=>{let b='';for(let i=1;i<=5;i++)b+=`<button data-scale="${key}" data-v="${i}" class="${ci[key]===i?'sel':''}">${i}</button>`;
+      return `<label class="fl">${lab} (1–5)</label><div class="scale">${b}</div>`;}
+    return `<h1>Weekly Check-In</h1><div class="sub">Takes 30 seconds. Your coach sees this straight away.</div>
+      <div class="card">
+        <label class="fl">Bodyweight</label><input type="number" step="0.1" id="ci_weight" placeholder="e.g. 210" inputmode="decimal">
+        ${scale('strength','Strength in the gym')}
+        ${scale('hunger','Hunger levels')}
+        ${scale('energy','Energy / mood')}
+        <label class="fl">Adherence to the plan (%)</label><input type="number" id="ci_adh" placeholder="0–100" inputmode="numeric" max="100" min="0">
+        <label class="fl">Notes for your coach</label><textarea id="ci_notes" placeholder="How did the week go? Anything to flag?"></textarea>
+        <button class="btn" id="ci_submit" style="margin-top:16px">Submit Check-In</button>
+      </div>`;
+  }
+
+  // ---------- PROGRESS ----------
+  async function progressView(){
+    let rows=[];try{rows=await rpc('client_portal_checkins',{p_code:code});}catch(e){}
+    let h='<h1>Progress</h1>';
+    if(!rows.length) return h+'<div class="empty">No check-ins yet. Head to the Check-In tab to log your first one.</div>';
+    const w=rows.filter(r=>r.weight!=null);
+    if(w.length>=2){const latest=w[0].weight,first=w[w.length-1].weight,diff=(latest-first).toFixed(1);
+      h+=`<div class="card"><h3>Weight trend</h3><div style="font-size:13px;color:#c7cfda">Started <b>${first}</b> → now <b class="w">${latest}</b> <span style="color:${diff<=0?'#5fd3a3':'#f0c15a'}">(${diff>0?'+':''}${diff})</span> over ${w.length} check-ins.</div></div>`;}
+    h+='<div class="card"><h3>History</h3>';
+    rows.forEach(r=>{h+=`<div class="ci"><div><div class="d">${fmtDate(r.date)}</div><div style="font-size:11px;color:var(--muted)">S${r.strength||'–'} · H${r.hunger||'–'} · E${r.energy||'–'}${r.adherence!=null?' · '+r.adherence+'%':''}</div></div><div class="w">${r.weight!=null?r.weight:'—'}</div></div>`;
+      if(r.notes) h+=`<div style="font-size:12px;color:#c7cfda;padding:0 0 8px">“${esc(r.notes)}”</div>`;});
+    h+='</div>';
+    // photos
+    let photos=[];try{photos=await rpc('client_portal_photos',{p_code:code});}catch(e){}
+    h+=`<div class="card"><h3>Progress Photos</h3>
+      <input type="file" accept="image/*" id="ph_file" style="margin-bottom:8px">
+      <textarea id="ph_note" placeholder="Optional note (front/side/back, lighting…)" style="min-height:44px"></textarea>
+      <button class="btn ghost" id="ph_submit" style="margin-top:8px">Upload Photo</button>`;
+    if(photos.length){h+='<div class="gallery" style="margin-top:12px">';
+      photos.forEach(p=>{const src=p.storage_path||'';h+=`<figure>${src?`<img src="${esc(src)}" alt="">`:''}<figcaption>${fmtDate(p.date)}${p.note?' · '+esc(p.note):''}</figcaption></figure>`;});
+      h+='</div>';}
+    h+='</div>';
+    return h;
+  }
+
+  // ---------- WORKOUT LOG ----------
+  let logDayIdx=0;
+  async function workoutView(){
+    const w=plan&&plan.workout;
+    let h='<h1>Workout Log</h1>';
+    if(!w||!(w.days||[]).length){return h+'<div class="empty">No training plan assigned yet.</div>';}
+    const days=w.days.filter(d=>(d.exercises||[]).length);
+    if(!days.length) return h+'<div class="empty">No logged exercises in your plan yet.</div>';
+    if(logDayIdx>=days.length)logDayIdx=0;
+    const day=days[logDayIdx];
+    h+=`<div class="sub">Log your lifts — beat last week where you can.</div>
+      <label class="fl">Session</label><select id="log_day">${days.map((d,i)=>`<option value="${i}" ${i===logDayIdx?'selected':''}>${esc(d.name)}</option>`).join('')}</select>
+      <div class="card" style="margin-top:12px">`;
+    day.exercises.forEach((e,ei)=>{
+      h+=`<div class="exblock" data-ex="${esc(e.name)}"><div class="en">${esc(e.name)} <span style="color:var(--muted);font-size:11px;font-weight:600">${esc(e.sets_reps||'')}</span></div>`;
+      for(let s=1;s<=3;s++) h+=`<div class="logset"><span class="lbl">${s}</span><input type="number" step="0.5" inputmode="decimal" placeholder="weight" data-ex="${ei}" data-set="${s}" data-k="weight"><span class="lbl">×</span><input type="number" inputmode="numeric" placeholder="reps" data-ex="${ei}" data-set="${s}" data-k="reps"></div>`;
+      h+='</div>';
+    });
+    h+=`<button class="btn" id="log_submit" style="margin-top:6px">Save Workout</button></div>`;
+    // recent
+    let logs=[];try{logs=await rpc('client_portal_workout_logs',{p_code:code});}catch(e){}
+    if(logs.length){
+      const byLog={};logs.forEach(r=>{(byLog[r.log_id]=byLog[r.log_id]||{date:r.date,day:r.day_name,sets:[]}).sets.push(r);});
+      h+='<div class="card"><h3>Recent Sessions</h3>';
+      Object.values(byLog).slice(0,4).forEach(L=>{h+=`<div class="mc" style="margin-top:8px"><div class="n">${esc(L.day||'Session')} · <span style="color:var(--muted);font-weight:600">${fmtDate(L.date)}</span></div>`;
+        L.sets.forEach(s=>{h+=`<div class="exrow"><span>${esc(s.exercise)}</span><span class="sr">${s.weight!=null?s.weight:'–'} × ${s.reps!=null?s.reps:'–'}${s.is_pr?'<span class="prbadge">PR</span>':''}</span></div>`;});
+        h+='</div>';});
+      h+='</div>';
+    }
+    return h;
+  }
+
+  // ---------- MESSAGES ----------
+  async function messagesView(){
+    let msgs=[];try{msgs=await rpc('client_portal_messages',{p_code:code});}catch(e){}
+    let h='<h1>Your Coach</h1><div class="card"><div class="thread" id="thread">';
+    if(!msgs.length) h+='<div class="empty">No messages yet — say hi 👋</div>';
+    msgs.forEach(m=>{h+=`<div class="bub ${m.from_role==='client'?'client':'coach'}">${esc(m.text)}</div>`;});
+    h+=`</div><div class="inrow"><input id="msg_in" placeholder="Message your coach…"><button class="btn" id="msg_send">Send</button></div></div>`;
+    return h;
+  }
+
+  // ---------- COMMUNITY ----------
+  async function communityView(){
+    let posts=[];try{posts=await rpc('client_portal_group_list',{p_code:code,p_channel:'chat'});}catch(e){}
+    let h='<h1>Community</h1><div class="sub">The whole crew — hype each other up.</div><div class="card"><div class="thread">';
+    if(!posts.length) h+='<div class="empty">No posts yet. Start the conversation!</div>';
+    posts.forEach(p=>{const mine=p.author_role==='client';h+=`<div class="bub ${mine?'client':'coach'}" style="max-width:88%"><div style="font-size:10px;opacity:.8;font-weight:700;margin-bottom:2px">${esc(p.author_name||(p.author_role==='coach'?'Coach':'Member'))}</div>${esc(p.text)}</div>`;});
+    h+=`</div><div class="inrow"><input id="grp_in" placeholder="Post to the group…"><button class="btn" id="grp_send">Post</button></div></div>`;
+    return h;
+  }
+
+  async function render(){
+    const views={plan:planView,checkin:checkinView,progress:progressView,workout:workoutView,messages:messagesView,community:communityView};
+    let inner='';
+    try{ inner = await views[view.tab](); }catch(e){ inner='<div class="empty">Something went wrong loading this. Pull to refresh.</div>'; }
+    app.innerHTML = topbar()+`<div class="wrap" style="padding-top:8px">${inner}</div>`+tabbar();
+    wire();
+  }
+
+  function wire(){
+    document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{view.tab=b.getAttribute('data-tab');ci={strength:0,hunger:0,energy:0};render();});
+    // check-in
+    document.querySelectorAll('[data-scale]').forEach(b=>b.onclick=()=>{ci[b.getAttribute('data-scale')]=+b.getAttribute('data-v');render();});
+    const cis=document.getElementById('ci_submit');
+    if(cis) cis.onclick=async()=>{
+      const weight=parseFloat(document.getElementById('ci_weight').value)||null;
+      const adh=document.getElementById('ci_adh').value===''?null:parseInt(document.getElementById('ci_adh').value);
+      const notes=document.getElementById('ci_notes').value.trim();
+      if(weight==null && !ci.strength && !notes){toast('Add at least your weight or a note');return;}
+      cis.disabled=true;cis.textContent='Saving…';
+      try{ await rpc('client_portal_submit_checkin',{p_code:code,p_weight:weight,p_strength:ci.strength||null,p_hunger:ci.hunger||null,p_energy:ci.energy||null,p_adherence:adh,p_notes:notes||null});
+        me.account_status='active'; toast('Check-in sent ✅'); view.tab='progress'; render();
+      }catch(e){cis.disabled=false;cis.textContent='Submit Check-In';toast('Error: '+(e.message||'try again'));}
+    };
+    // photo
+    const phs=document.getElementById('ph_submit');
+    if(phs) phs.onclick=()=>{
+      const f=document.getElementById('ph_file').files[0];
+      if(!f){toast('Choose a photo first');return;}
+      if(f.size>5*1024*1024){toast('Photo too large (max 5MB)');return;}
+      const note=document.getElementById('ph_note').value.trim();
+      const r=new FileReader();phs.disabled=true;phs.textContent='Uploading…';
+      r.onload=async()=>{try{await rpc('client_portal_submit_photo',{p_code:code,p_date:new Date().toISOString().slice(0,10),p_photo_data:r.result,p_note:note||null});me.account_status='active';toast('Photo uploaded 📸');render();}catch(e){phs.disabled=false;phs.textContent='Upload Photo';toast('Error: '+(e.message||'try again'));}};
+      r.readAsDataURL(f);
+    };
+    // workout log
+    const ld=document.getElementById('log_day');
+    if(ld) ld.onchange=()=>{logDayIdx=+ld.value;render();};
+    const ls=document.getElementById('log_submit');
+    if(ls) ls.onclick=async()=>{
+      const w=plan.workout, days=w.days.filter(d=>(d.exercises||[]).length), day=days[logDayIdx];
+      const exs=day.exercises.map((e,ei)=>{const sets=[];for(let s=1;s<=3;s++){const wv=document.querySelector(`input[data-ex="${ei}"][data-set="${s}"][data-k="weight"]`).value;const rv=document.querySelector(`input[data-ex="${ei}"][data-set="${s}"][data-k="reps"]`).value;if(wv||rv)sets.push({weight:wv,reps:rv});}return {name:e.name,sets};}).filter(e=>e.sets.length);
+      if(!exs.length){toast('Log at least one set');return;}
+      ls.disabled=true;ls.textContent='Saving…';
+      try{await rpc('client_portal_submit_workout_log',{p_code:code,p_day_name:day.name,p_date:new Date().toISOString().slice(0,10),p_exercises:exs});me.account_status='active';toast('Workout saved 🏋️');render();}catch(e){ls.disabled=false;ls.textContent='Save Workout';toast('Error: '+(e.message||'try again'));}
+    };
+    // messages
+    const send=document.getElementById('msg_send');
+    if(send){const input=document.getElementById('msg_in');const th=document.getElementById('thread');if(th)th.scrollTop=th.scrollHeight;
+      const go=async()=>{const t=input.value.trim();if(!t)return;input.value='';try{await rpc('client_portal_send_message',{p_code:code,p_text:t});render();}catch(e){toast('Error sending');}};
+      send.onclick=go;input.onkeydown=e=>{if(e.key==='Enter')go();};}
+    // community
+    const gs=document.getElementById('grp_send');
+    if(gs){const input=document.getElementById('grp_in');const go=async()=>{const t=input.value.trim();if(!t)return;input.value='';try{await rpc('client_portal_group_post',{p_code:code,p_text:t});render();}catch(e){toast('Error posting');}};
+      gs.onclick=go;input.onkeydown=e=>{if(e.key==='Enter')go();};}
+  }
+
+  boot();
+})();
+</script>
+</body>
+</html>

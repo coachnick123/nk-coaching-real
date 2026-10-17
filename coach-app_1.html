@@ -1,0 +1,1668 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>NT Coaching — Dashboard</title>
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="NT Coaching">
+<meta name="theme-color" content="#05070c">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#05070c; --surface:#0f1420; --surface-alt:#151b29; --surface-sunken:#0a0e17; --border:#222a3a;
+    --ink:#eef2f7; --ink-2:#aeb7c4; --muted:#7f8a99;
+    --accent:#0a6cf8; --accent-strong:#5b9bff; --accent-soft:rgba(10,108,248,0.16);
+    --good:#33ad7d; --good-soft:rgba(51,173,125,0.16); --warn:#e0a53a; --warn-soft:rgba(224,165,58,0.16); --critical:#f04868; --critical-soft:rgba(240,72,104,0.16);
+    --info:#5b9bff; --info-soft:rgba(91,155,255,0.16);
+    --shadow: 0 1px 2px rgba(0,0,0,0.4), 0 10px 28px -14px rgba(0,0,0,0.7);
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--ink); -webkit-font-smoothing:antialiased; touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
+  h1 { font-family:"Archivo",sans-serif; font-weight:800; font-size:30px; margin:0 0 6px; letter-spacing:-0.4px; }
+  h2 { font-family:"Archivo",sans-serif; font-weight:700; font-size:16px; margin:22px 0 10px; }
+  a { color:var(--accent-strong); }
+  .sub { color:var(--ink-2); font-size:14px; margin-bottom:20px; }
+  .sub .hl { color:var(--accent-strong); font-weight:600; }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:20px; margin-bottom:16px; box-shadow:var(--shadow); }
+  label { display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:var(--muted); margin-bottom:6px; }
+  input, textarea, select { width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:9px; font-size:14px; background:var(--surface); color:var(--ink); font-family:inherit; }
+  textarea { min-height:70px; resize:vertical; }
+  .field { margin-bottom:14px; }
+  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .row3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; border:1px solid transparent; border-radius:10px; padding:10px 16px; font-weight:600; font-size:13.5px; cursor:pointer; background:var(--accent); color:#fff; white-space:nowrap; }
+  .btn:hover { filter:brightness(1.08); }
+  .btn-ghost { background:transparent; border-color:var(--border); color:var(--ink); }
+  .btn-primary { background:var(--accent); color:#fff; font-weight:700; }
+  .brand-logo { height:40px; width:auto; display:block; }
+  .btn-sm { padding:8px 12px; font-size:12.5px; width:auto; }
+  .btn-block { width:100%; }
+  .btn-danger { background:var(--critical-soft); color:var(--critical); border-color:transparent; }
+  .row { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 0; border-top:1px solid var(--border); }
+  .row:first-child { border-top:none; }
+  .name { font-weight:600; }
+  .meta { font-size:12px; color:var(--muted); margin-top:2px; }
+  .chip { display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700; padding:3px 10px; border-radius:999px; }
+  .chip.active, .chip.good { background:var(--good-soft); color:var(--good); }
+  .chip.invited, .chip.warn { background:var(--warn-soft); color:var(--warn); }
+  .chip.critical { background:var(--critical-soft); color:var(--critical); }
+  .chip.muted { background:var(--surface-sunken); color:var(--ink-2); }
+  .chip.head { background:var(--accent-soft); color:var(--accent-strong); }
+  .chip.assistant { background:var(--surface-sunken); color:var(--ink-2); }
+  .chip .dot { width:6px; height:6px; border-radius:50%; background:currentColor; }
+  .back { background:none; border:none; color:var(--ink-2); font-size:13px; cursor:pointer; padding:0; margin-bottom:16px; }
+  .invite-box { display:flex; gap:8px; margin-top:6px; }
+  .invite-box input { flex:1; font-family:monospace; font-size:12.5px; background:var(--surface-alt); }
+  .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#1a2333; border:1px solid var(--border); color:#fff; padding:12px 20px; border-radius:10px; font-size:13px; font-weight:600; opacity:0; pointer-events:none; transition:opacity 0.2s; z-index:60; max-width:90vw; text-align:center; }
+  .toast.show { opacity:1; }
+  .status-line { font-size:12.5px; color:var(--muted); margin-bottom:14px; }
+  .checkin-item { padding:10px 0; border-top:1px solid var(--border); font-size:13px; }
+  .checkin-item:first-child { border-top:none; }
+  .empty { color:var(--muted); font-size:13.5px; padding:26px 0; text-align:center; }
+
+  /* ---- App shell ---- */
+  .topbar { position:sticky; top:0; z-index:20; display:flex; align-items:center; justify-content:space-between; gap:16px;
+    padding:13px 24px; background:var(--surface); border-bottom:1px solid var(--border); }
+  .topbar-brand { display:flex; align-items:center; gap:12px; min-width:0; }
+  .tb-name { font-family:"Archivo",sans-serif; font-weight:800; font-size:16px; letter-spacing:-0.2px; line-height:1.15; }
+  .tb-tag { font-size:10.5px; font-weight:700; letter-spacing:1px; color:var(--muted); text-transform:uppercase; margin-top:1px; }
+  .privatepill { display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:var(--ink-2);
+    background:var(--surface-alt); border:1px solid var(--border); padding:6px 12px; border-radius:999px; }
+  .container { max-width:1180px; margin:0 auto; padding:24px 24px 72px; }
+  .container-narrow { max-width:460px; padding-top:56px; }
+  .brand-row { display:flex; align-items:center; gap:12px; margin-bottom:4px; }
+  .brand-mark { width:38px; height:38px; border-radius:11px; display:flex; align-items:center; justify-content:center; flex-shrink:0; background:radial-gradient(120% 120% at 30% 20%, #202228, #0a0b0d); border:1px solid #47401f; overflow:hidden; }
+  .brand-mark svg { width:100%; height:100%; }
+
+  /* ---- Tabs ---- */
+  .tab-bar { display:inline-flex; gap:2px; background:var(--surface-alt); border-radius:12px; padding:4px; margin-bottom:24px; max-width:100%; overflow-x:auto; }
+  .tab-btn { border:none; background:none; padding:9px 16px; border-radius:9px; font-size:13.5px; font-weight:600; color:var(--ink-2); cursor:pointer; white-space:nowrap; display:inline-flex; align-items:center; }
+  .tab-btn.sel { background:var(--surface); color:var(--ink); box-shadow:0 1px 2px rgba(0,0,0,0.08); }
+  .tab-badge { display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 5px; border-radius:999px; background:var(--critical); color:#fff; font-size:10.5px; font-weight:700; margin-left:7px; }
+
+  /* ---- Toolbar ---- */
+  .toolbar { display:flex; gap:10px; align-items:center; margin:16px 0 20px; flex-wrap:wrap; }
+  .search { position:relative; flex:1; min-width:180px; }
+  .search input { padding-left:36px; }
+  .search svg { position:absolute; left:12px; top:50%; transform:translateY(-50%); width:15px; height:15px; color:var(--muted); pointer-events:none; }
+  .toolbar select { width:auto; min-width:150px; }
+
+  /* ---- Stat cards ---- */
+  .statgrid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:20px; }
+  .statcard { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 18px; box-shadow:var(--shadow); }
+  .statcard .l { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:var(--muted); margin-bottom:9px; }
+  .statcard .big { font-family:"Archivo",sans-serif; font-weight:800; font-size:34px; line-height:1; letter-spacing:-0.5px; }
+  .statcard .big small { font-size:18px; color:var(--muted); font-weight:700; }
+  .statcard .foot { font-size:12px; color:var(--ink-2); margin-top:8px; }
+  .statcard.good .big { color:var(--good); }
+  .statcard.warn .big { color:var(--warn); }
+  .statcard.accent .big { color:var(--accent-strong); }
+
+  /* ---- Roster table ---- */
+  .roster { background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow); overflow:hidden; }
+  .roster-head, .roster-row { display:grid; grid-template-columns:2.3fr 1fr 1.5fr 1.2fr 1.1fr 26px; align-items:center; gap:14px; padding:14px 20px; }
+  .roster-head { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:var(--muted); border-bottom:1px solid var(--border); }
+  .roster-row { border-top:1px solid var(--border); width:100%; text-align:left; background:none; color:inherit; font:inherit; cursor:pointer; }
+  .roster-row:first-of-type { border-top:none; }
+  .roster-row:hover { background:var(--surface-alt); }
+  .cell-client { display:flex; align-items:center; gap:12px; min-width:0; }
+  .avatar { width:34px; height:34px; border-radius:50%; background:var(--surface-sunken); color:var(--ink-2); display:flex; align-items:center; justify-content:center; font-family:"Archivo",sans-serif; font-weight:700; font-size:13px; flex-shrink:0; }
+  .cell-name { font-weight:600; font-size:14.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .newbadge { display:inline-block; background:var(--info-soft); color:var(--info); font-size:10px; font-weight:700; padding:1px 7px; border-radius:999px; margin-left:8px; vertical-align:middle; }
+  .cell-weight { font-weight:700; font-size:15px; }
+  .cell-weight span { color:var(--muted); font-weight:500; font-size:12px; }
+  .trend { display:flex; align-items:center; gap:8px; }
+  .trend svg { width:74px; height:30px; flex-shrink:0; }
+  .trend .delta { font-size:12.5px; font-weight:700; }
+  .delta.good { color:var(--good); } .delta.bad { color:var(--critical); } .delta.flat { color:var(--muted); }
+  .cell-check { font-size:13.5px; color:var(--ink-2); }
+  .chev { color:var(--muted); justify-self:end; }
+  @media (max-width:780px) {
+    .roster-head { display:none; }
+    .roster-row { grid-template-columns:minmax(0,1fr) auto auto; grid-auto-rows:auto; gap:10px; padding:14px 16px; }
+    .roster-row .cell-trend, .roster-row .cell-check, .roster-row .chev { display:none; }
+  }
+
+  /* ---- Modal ---- */
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.66); display:flex; align-items:flex-start; justify-content:center; padding:56px 16px; z-index:50; overflow:auto; }
+  .modal { background:var(--surface); border:1px solid var(--border); border-radius:18px; padding:24px; max-width:440px; width:100%; box-shadow:0 24px 60px -20px rgba(0,0,0,0.7); }
+  .modal-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .modal-head h2 { margin:0; font-size:18px; }
+  .modal-x { background:none; border:none; font-size:22px; line-height:1; color:var(--muted); cursor:pointer; padding:0 2px; }
+  .warn-banner { background:var(--warn-soft); color:var(--warn); border-radius:10px; padding:12px 16px; font-size:13px; font-weight:600; margin-bottom:18px; }
+
+  /* ---- misc shared (detail / programs / billing / reminders) ---- */
+  .chat-thread { max-height:320px; overflow-y:auto; display:flex; flex-direction:column; gap:8px; margin-bottom:12px; }
+  .bubble { max-width:80%; padding:9px 13px; border-radius:14px; font-size:13px; line-height:1.4; }
+  .bubble.coach { align-self:flex-end; background:var(--accent); color:#fff; border-bottom-right-radius:4px; }
+  .bubble.client { align-self:flex-start; background:var(--surface-alt); color:var(--ink); border-bottom-left-radius:4px; }
+  .chat-input-row { display:flex; gap:8px; }
+  .chat-input-row input { flex:1; }
+  .bill-summary { font-size:14px; }
+  .bill-summary b { font-size:18px; }
+  .stock-badge { display:inline-flex; align-items:center; font-size:10px; font-weight:700; letter-spacing:0.3px; padding:2px 8px; border-radius:999px; background:var(--surface-sunken); color:var(--ink-2); margin-left:6px; text-transform:uppercase; }
+  .reminder-card { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; padding:14px 0; border-top:1px solid var(--border); }
+  .reminder-card:first-child { border-top:none; }
+  .reminder-rule { font-size:10.5px; font-weight:700; letter-spacing:0.4px; text-transform:uppercase; color:var(--warn); margin-bottom:3px; }
+  .reminder-rule.celeb { color:var(--good); }
+  .reminder-msg { font-size:12.5px; color:var(--ink-2); margin-top:4px; line-height:1.5; }
+  .segrow { display:flex; gap:6px; margin-bottom:16px; }
+  .segrow button { flex:1; padding:8px 0; border:1px solid var(--border); background:var(--surface); border-radius:8px; font-size:12.5px; font-weight:600; cursor:pointer; color:var(--ink-2); }
+  .segrow button.sel { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .accent-swatches { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
+  .accent-swatch { width:32px; height:32px; border-radius:8px; cursor:pointer; border:2px solid transparent; }
+  .accent-swatch.sel { border-color:var(--ink); }
+  .day-card { border:1px solid var(--border); border-radius:10px; padding:12px 14px; margin-bottom:10px; background:var(--surface-alt); }
+  .day-card-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+  .day-card-name-input { font-weight:700; }
+  .ex-row { display:flex; gap:8px; margin-bottom:6px; align-items:center; }
+  .ex-row input { flex:1; }
+  .ex-row input.sets { flex:0 0 90px; }
+  .rm-btn { background:none; border:none; color:var(--critical); cursor:pointer; font-size:16px; padding:0 4px; flex-shrink:0; }
+  .add-line-btn { background:none; border:1px dashed var(--border); color:var(--ink-2); border-radius:7px; padding:7px 10px; font-size:12px; cursor:pointer; width:100%; margin-top:2px; }
+  .macro-tile-row { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:10px 0; }
+  .macro-tile { background:var(--surface-alt); border-radius:8px; padding:8px 4px; text-align:center; }
+  .macro-tile .n { font-family:"Archivo",sans-serif; font-weight:800; font-size:15px; }
+  .macro-tile .l { font-size:9.5px; color:var(--muted); text-transform:uppercase; }
+  .meal-card { border:1px solid var(--border); border-radius:10px; padding:12px 14px; margin-bottom:10px; background:var(--surface-alt); }
+  .pr-badge { display:inline-block; background:var(--good-soft); color:var(--good); font-size:10px; font-weight:700; padding:1px 7px; border-radius:999px; margin-left:6px; text-transform:uppercase; }
+  .photo-strip { display:flex; gap:8px; overflow-x:auto; padding:2px; margin-bottom:6px; }
+  .photo-strip img { width:78px; height:98px; object-fit:cover; border-radius:8px; border:1px solid var(--border); flex-shrink:0; cursor:pointer; transition:transform 0.12s, border-color 0.12s; }
+  .photo-strip img:hover { transform:translateY(-2px); border-color:var(--accent-strong); }
+  .photo-strip img.cmp-pick { outline:2px solid var(--accent-strong); outline-offset:1px; }
+  .photo-strip img.cmp-chosen { border-color:var(--accent); box-shadow:0 0 0 2px var(--accent); }
+  .photo-strip-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px; }
+  .photo-strip-head .hint { font-size:12px; color:var(--muted); }
+  .cmp-badge { display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 5px; border-radius:999px; background:var(--accent); color:#fff; font-size:11px; font-weight:700; margin-left:6px; }
+  /* Full-screen progress photo viewer */
+  .pv-overlay { position:fixed; inset:0; background:rgba(4,6,11,0.94); z-index:70; display:flex; flex-direction:column; -webkit-backdrop-filter:blur(2px); backdrop-filter:blur(2px); }
+  .pv-top { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 16px; flex-shrink:0; }
+  .pv-title { font-family:"Archivo",sans-serif; font-weight:700; font-size:15px; color:var(--ink); }
+  .pv-actions { display:flex; align-items:center; gap:8px; }
+  .pv-btn { background:var(--surface-alt); border:1px solid var(--border); color:var(--ink); font-size:13px; font-weight:600; padding:8px 14px; border-radius:10px; cursor:pointer; }
+  .pv-btn.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .pv-btn:disabled { opacity:0.4; cursor:default; }
+  .pv-x { background:none; border:none; color:var(--ink-2); font-size:26px; line-height:1; cursor:pointer; padding:0 4px; }
+  .pv-stage { flex:1; position:relative; display:flex; align-items:center; justify-content:center; overflow:hidden; min-height:0; }
+  .pv-stage img { max-width:96%; max-height:100%; object-fit:contain; border-radius:10px; }
+  .pv-nav { position:absolute; top:50%; transform:translateY(-50%); background:rgba(21,27,41,0.8); border:1px solid var(--border); color:#fff; width:44px; height:44px; border-radius:50%; font-size:22px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .pv-nav.prev { left:12px; } .pv-nav.next { right:12px; }
+  .pv-nav:disabled { opacity:0.25; cursor:default; }
+  .pv-caption { text-align:center; color:var(--ink-2); font-size:13px; padding:10px 16px 6px; flex-shrink:0; }
+  .pv-caption b { color:var(--ink); }
+  /* compare (side by side) */
+  .pv-compare { flex:1; display:flex; gap:2px; min-height:0; padding:0 8px 8px; }
+  .pv-pane { flex:1; display:flex; flex-direction:column; min-width:0; }
+  .pv-pane .pv-img-wrap { flex:1; display:flex; align-items:center; justify-content:center; overflow:hidden; min-height:0; background:var(--surface-sunken); border:1px solid var(--border); border-radius:10px; }
+  .pv-pane img { max-width:100%; max-height:100%; object-fit:contain; }
+  .pv-pane .pv-pane-cap { text-align:center; color:var(--ink-2); font-size:12px; padding:8px 4px 2px; }
+  .pv-pane .pv-pane-cap b { color:var(--ink); font-size:13px; }
+  .pv-pane .pv-pane-cap .delta { color:var(--accent-strong); font-weight:600; }
+  @media (max-width:520px){ .pv-compare { flex-direction:row; } .pv-pane img { border-radius:8px; } }
+  svg.chart { width:100%; height:120px; display:block; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start; }
+  @media (max-width:780px){ .statgrid{grid-template-columns:1fr 1fr;} .grid2{grid-template-columns:1fr;} }
+  @media (max-width:480px){ .statgrid{grid-template-columns:1fr 1fr;} h1{font-size:26px;} }
+</style>
+</head>
+<body>
+<div id="app">Loading…</div>
+<div id="modalHost"></div>
+<div id="photoViewerHost"></div>
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+const { createClient } = supabase;
+const supabase_client = createClient(
+  'https://uftjzxofhrntrwlrecvw.supabase.co',
+  'sb_publishable_jQMNWo8T6cPd9bNsQebJMQ_GgMTk1-W'
+);
+
+const LOGO_URL = '/nt-training-logo.webp';
+const app = document.getElementById('app');
+const modalHost = document.getElementById('modalHost');
+const photoViewerHost = document.getElementById('photoViewerHost');
+let progressPhotos = [];        // photos for the client currently in view (newest first)
+let compareSelect = null;       // when in compare-pick mode: array of chosen indexes
+let token = new URLSearchParams(window.location.search).get('key');
+// Remember the coach's private key so it survives "Add to Home Screen" (the installed
+// app launches without ?key in the URL). Save it when present; restore it otherwise.
+try {
+  if (token) { localStorage.setItem('nk_coach_key', token); }
+  else {
+    const savedKey = localStorage.getItem('nk_coach_key');
+    if (savedKey) {
+      token = savedKey;
+      history.replaceState({}, '', window.location.pathname + '?key=' + encodeURIComponent(savedKey));
+    }
+  }
+} catch (e) {}
+let coachInfo = null, clients = [], view = { tab: 'clients', screen: 'roster', clientId: null, detailTab: 'overview' };
+let msgDraft = '';
+let groupSub = 'chat', groupDraft = '';
+let rosterSearch = '';
+let bulkImportText = '';
+let workoutDraft = null, mealDraft = null;
+const ACCENT_COLORS = {
+  gold:   { base:'#c9a53f', strong:'#a9862b' },
+  blue:   { base:'#0a6cf8', strong:'#5b9bff' },
+  green:  { base:'#1f8a5f', strong:'#176b49' },
+  purple: { base:'#7c5cd6', strong:'#6344b0' },
+  red:    { base:'#c94f4f', strong:'#a83d3d' },
+  teal:   { base:'#1f9a9a', strong:'#167979' },
+};
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2600);
+}
+function esc(s) { return (s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escAttr(s) { return esc(s).replace(/"/g, '&quot;'); }
+function setKeyInUrl(k) {
+  const url = new URL(window.location.href);
+  url.searchParams.set('key', k);
+  window.history.replaceState({}, '', url.toString());
+}
+function fmtMoney(n) { return '$' + Math.round(Number(n)).toLocaleString('en-US'); }
+function applyAccent(accentId) {
+  const c = ACCENT_COLORS[accentId] || ACCENT_COLORS.gold;
+  document.documentElement.style.setProperty('--accent', c.base);
+  document.documentElement.style.setProperty('--accent-strong', c.strong);
+}
+function brandMark() {
+  return `<img class="brand-logo" src="${LOGO_URL}" alt="NT Coaching">`;
+}
+function initialsOf(name) {
+  const parts = (name || '').trim().split(/\s+/);
+  return ((parts[0]||'?')[0] + (parts[1]? parts[1][0] : '')).toUpperCase();
+}
+function daysAgo(dateStr) {
+  if (!dateStr) return null;
+  return Math.floor((Date.now() - new Date(dateStr + 'T00:00:00').getTime()) / 86400000);
+}
+function relDate(dateStr) {
+  const d = daysAgo(dateStr);
+  if (d === null) return '—';
+  if (d <= 0) return 'Today';
+  if (d === 1) return 'Yesterday';
+  if (d < 7) return d + ' days ago';
+  if (d < 14) return 'Last week';
+  return Math.floor(d/7) + ' weeks ago';
+}
+window.addEventListener('error', e => toast('Script error: ' + e.message));
+window.addEventListener('unhandledrejection', e => toast('Error: ' + (e.reason && e.reason.message ? e.reason.message : String(e.reason))));
+
+function noKeyScreen() {
+  return `
+    <h1>Open your coaching link</h1>
+    <div class="sub">This dashboard opens from your own private link — the one ending in <b>?key=…</b>. Tap that link (or your saved bookmark / home-screen icon) to log in. If you added it to your home screen, open your link once in your browser first, then re-add it.</div>
+    <div class="card"><div class="empty">Waiting for your private link.</div></div>
+  `;
+}
+async function boot() {
+  if (!token) { app.innerHTML = `<div class="container container-narrow">${noKeyScreen()}</div>`; return; }
+  await render();
+}
+async function loadCoachInfo() {
+  const { data } = await supabase_client.rpc('coach_portal_lookup', { p_token: token });
+  coachInfo = (data && data[0]) || null;
+  if (coachInfo) applyAccent(coachInfo.accent_id);
+}
+async function loadRoster() {
+  const { data } = await supabase_client.rpc('coach_portal_roster', { p_token: token });
+  clients = Array.isArray(data) ? data : [];
+}
+
+function topBar() {
+  return `<div class="topbar">
+    <div class="topbar-brand">${brandMark()}<div><div class="tb-tag">${esc((coachInfo.tagline || 'Coach Dashboard').toUpperCase())}</div></div></div>
+    <div class="privatepill">🔒 Private link · your login</div>
+  </div>`;
+}
+
+async function render() {
+  await loadCoachInfo();
+  if (!coachInfo) { app.innerHTML = `<div class="container container-narrow">${invalidLinkScreen()}</div>`; return; }
+
+  let inner = '', wireFn = null;
+  if (view.tab === 'settings') { inner = settingsScreen(); wireFn = wireSettings; }
+  else if (view.tab === 'billing') { inner = await billingScreen(); wireFn = wireBilling; }
+  else if (view.tab === 'programs') { inner = await programsScreen(); wireFn = wirePrograms; }
+  else if (view.tab === 'reminders') { inner = await remindersScreen(); wireFn = wireReminders; }
+  else if (view.tab === 'team') { inner = await teamScreen(); wireFn = wireTeam; }
+  else if (view.tab === 'community') { inner = await communityScreen(); wireFn = wireCommunity; }
+  else {
+    await loadRoster();
+    if (view.screen === 'detail' && view.clientId) { inner = await detailScreen(); wireFn = wireDetail; }
+    else { inner = rosterScreen(); wireFn = wireRoster; }
+  }
+  app.innerHTML = topBar() + `<div class="container">${inner}</div>`;
+  if (wireFn) wireFn();
+}
+
+function tabBar() {
+  const t = (id, label, badge) => `<button class="tab-btn ${view.tab === id ? 'sel' : ''}" data-tab="${id}">${label}${badge ? `<span class="tab-badge">${badge}</span>` : ''}</button>`;
+  return `<div class="tab-bar">
+    ${t('clients','Clients')}
+    ${t('community','Community')}
+    ${t('programs','Programs')}
+    ${t('reminders','Reminders')}
+    ${t('billing','Billing')}
+    ${t('team','Team')}
+    ${t('settings','Settings')}
+  </div>`;
+}
+function wireTabBar() {
+  document.querySelectorAll('[data-tab]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      view.tab = btn.getAttribute('data-tab');
+      view.screen = 'roster'; view.clientId = null; rosterSearch = '';
+      render();
+    });
+  });
+}
+
+/* ================= COMMUNITY (group chat + announcements) ================= */
+function fmtWhen(ts) {
+  try { return new Date(ts).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); }
+  catch (e) { return ''; }
+}
+async function communityScreen() {
+  const { data } = await supabase_client.rpc('coach_portal_group_list', { p_token: token, p_channel: groupSub });
+  const posts = data || [];
+  const isAnnounce = groupSub === 'announce';
+  const thread = posts.length ? posts.map(p => {
+    const isCoach = p.author_role === 'coach';
+    const del = `<span data-cgroup-del="${p.id}" style="cursor:pointer; color:var(--muted); font-size:10.5px;">Delete</span>`;
+    if (isAnnounce) {
+      return `<div class="checkin-item" style="padding:12px 0;">
+        <div style="display:flex; justify-content:space-between; align-items:baseline;"><b>📣 ${esc(p.author_name)}</b><span style="color:var(--muted); font-size:11px;">${fmtWhen(p.created_at)} · ${del}</span></div>
+        <div style="margin-top:5px; white-space:pre-wrap;">${esc(p.text)}</div>
+      </div>`;
+    }
+    return `<div style="align-self:${isCoach?'flex-end':'flex-start'}; max-width:82%;">
+      ${isCoach ? '' : `<div style="font-size:11px; font-weight:700; color:var(--ink-2); margin:0 0 3px 4px;">${esc(p.author_name)}</div>`}
+      <div class="bubble ${isCoach?'coach':'client'}" style="max-width:100%;">${esc(p.text)}</div>
+      <div style="text-align:${isCoach?'right':'left'}; font-size:10px; color:var(--muted); margin-top:2px; padding:0 4px;">${fmtWhen(p.created_at)} · ${del}</div>
+    </div>`;
+  }).join('') : `<div class="empty">${isAnnounce ? 'No announcements yet. Post an update — every client sees it in their app.' : 'No messages yet. Say hi to kick off the group.'}</div>`;
+
+  return `
+    <h1>Community</h1>
+    <div class="sub">${isAnnounce ? 'Broadcast updates to every client (read-only for them).' : 'Group chat — you and all your clients together.'}</div>
+    <div class="segrow" style="max-width:360px;">
+      <button class="${groupSub==='chat'?'sel':''}" data-cgroup-sub="chat">Group Chat</button>
+      <button class="${groupSub==='announce'?'sel':''}" data-cgroup-sub="announce">Announcements</button>
+    </div>
+    <div class="card">
+      <div class="chat-thread">${thread}</div>
+      <div class="chat-input-row">
+        <input type="text" id="cGroupInput" placeholder="${isAnnounce ? 'Write an announcement…' : 'Message the group…'}" value="${esc(groupDraft)}">
+        <button class="btn btn-primary" id="cGroupSendBtn">${isAnnounce ? 'Post' : 'Send'}</button>
+      </div>
+    </div>
+    ${tabBar()}
+  `;
+}
+function wireCommunity() {
+  wireTabBar();
+  document.querySelectorAll('[data-cgroup-sub]').forEach(btn => {
+    btn.addEventListener('click', () => { groupSub = btn.getAttribute('data-cgroup-sub'); groupDraft = ''; render(); });
+  });
+  const input = document.getElementById('cGroupInput');
+  if (input) input.addEventListener('input', e => { groupDraft = e.target.value; });
+  const sendBtn = document.getElementById('cGroupSendBtn');
+  if (sendBtn) sendBtn.addEventListener('click', async () => {
+    if (!groupDraft.trim()) return;
+    const { error } = await supabase_client.rpc('coach_portal_group_post', { p_token: token, p_channel: groupSub, p_text: groupDraft.trim() });
+    if (error) { toast('Error: ' + error.message); return; }
+    groupDraft = '';
+    await render();
+  });
+  document.querySelectorAll('[data-cgroup-del]').forEach(el => {
+    el.addEventListener('click', async () => {
+      const { error } = await supabase_client.rpc('coach_portal_group_delete', { p_token: token, p_post_id: el.getAttribute('data-cgroup-del') });
+      if (error) { toast('Error: ' + error.message); return; }
+      await render();
+      toast('Message deleted');
+    });
+  });
+}
+
+/* ================= WELCOME / INVALID ================= */
+function welcomeScreen() {
+  return `
+    <h1>Set Up Your Coaching Business</h1>
+    <div class="sub">No email, no login — just a private link that only you'll have. Bookmark it once you get it.</div>
+    <div class="card">
+      <div class="field"><label>Business name</label><input type="text" id="obBiz" placeholder="e.g. NK Coaching"></div>
+      <div class="field"><label>Your name</label><input type="text" id="obName" placeholder="e.g. Nick"></div>
+      <div class="field"><label>Phone (optional)</label><input type="tel" id="obPhone" placeholder="+1 555 123 4567"></div>
+      <button class="btn btn-primary btn-block" id="obBtn">Create My Business</button>
+    </div>
+  `;
+}
+function wireWelcome() {
+  document.getElementById('obBtn').addEventListener('click', async () => {
+    const bizName = document.getElementById('obBiz').value.trim();
+    const name = document.getElementById('obName').value.trim();
+    const phone = document.getElementById('obPhone').value.trim();
+    if (!bizName || !name) { toast('Business name and your name are required'); return; }
+    const { data, error } = await supabase_client.rpc('coach_portal_bootstrap', { p_business_name: bizName, p_coach_name: name, p_coach_phone: phone });
+    if (error || !data || !data.length) { toast('Error: ' + (error ? error.message : 'could not create business')); return; }
+    token = data[0].access_token;
+    setKeyInUrl(token);
+    await render();
+    toast('Welcome, ' + bizName + '! Bookmark this page — the link in your address bar is your private login.');
+  });
+}
+function invalidLinkScreen() {
+  return `<div class="card"><div class="empty">This link isn't valid. Double check the URL, or <a href="${window.location.origin}${window.location.pathname}">start over</a> to create a new business.</div></div>`;
+}
+
+/* ================= SETTINGS ================= */
+function settingsScreen() {
+  const accentId = coachInfo.accent_id || 'gold';
+  return `
+    ${tabBar()}
+    <h1>Settings</h1>
+    <div class="sub">Business name and branding shown across the app.</div>
+    <div class="card">
+      <div class="brand-row">${brandMark()}<div><div class="name">${esc(coachInfo.business_name)}</div><div class="meta">Logged in as ${esc(coachInfo.coach_name)}</div></div></div>
+    </div>
+    <div class="card">
+      <div class="field"><label>Business name</label><input type="text" id="setName" value="${escAttr(coachInfo.business_name)}"></div>
+      <div class="field"><label>Tagline</label><input type="text" id="setTagline" value="${escAttr(coachInfo.tagline || '')}" placeholder="Client Portal"></div>
+      <div class="field"><label>Logo initials (2-3 letters)</label><input type="text" id="setInitials" maxlength="3" value="${escAttr(coachInfo.mark_initials || 'NK')}"></div>
+      <div class="field">
+        <label>Accent color</label>
+        <div class="accent-swatches">
+          ${Object.keys(ACCENT_COLORS).map(id => `<div class="accent-swatch ${accentId===id?'sel':''}" data-accent-id="${id}" style="background:${ACCENT_COLORS[id].base};"></div>`).join('')}
+        </div>
+      </div>
+      <button class="btn btn-primary" id="saveBizBtn">Save</button>
+    </div>
+    <div class="warn-banner">🔒 Keep this page's link private — it's your login.</div>
+  `;
+}
+function wireSettings() {
+  wireTabBar();
+  let selectedAccent = coachInfo.accent_id || 'gold';
+  document.querySelectorAll('[data-accent-id]').forEach(sw => {
+    sw.addEventListener('click', () => {
+      selectedAccent = sw.getAttribute('data-accent-id');
+      document.querySelectorAll('[data-accent-id]').forEach(s => s.classList.remove('sel'));
+      sw.classList.add('sel');
+      applyAccent(selectedAccent);
+    });
+  });
+  document.getElementById('saveBizBtn').addEventListener('click', async () => {
+    const name = document.getElementById('setName').value.trim();
+    const tagline = document.getElementById('setTagline').value.trim();
+    const initials = document.getElementById('setInitials').value.trim();
+    if (!name) { toast('Business name is required'); return; }
+    const { error } = await supabase_client.rpc('coach_portal_update_business', { p_token: token, p_name: name, p_tagline: tagline, p_mark_initials: initials, p_accent_id: selectedAccent });
+    if (error) { toast('Error: ' + error.message); return; }
+    await render();
+    toast('Saved');
+  });
+}
+
+/* ================= BILLING ================= */
+async function billingScreen() {
+  const { data: rows } = await supabase_client.rpc('coach_portal_all_billing', { p_token: token });
+  const list = rows || [];
+  const items = list.map(r => `
+    <div class="row">
+      <div>
+        <div class="name">${esc(r.client_name)}</div>
+        ${r.term ? `<div class="meta">${esc(r.term)} · ${r.start_date} → ${r.end_date}</div>` : '<div class="meta">No billing on file</div>'}
+      </div>
+      ${r.amount ? `<div class="bill-summary"><b>${fmtMoney(r.amount)}</b></div>` : ''}
+    </div>
+  `).join('');
+  const monthlyTotal = list.reduce((sum, r) => {
+    if (!r.amount) return sum;
+    const months = { 'Monthly': 1, '3 Months': 3, '6 Months': 6, 'Annual': 12, 'One-Time': null }[r.term];
+    return sum + (months ? Number(r.amount) / months : 0);
+  }, 0);
+  const active = list.filter(r=>r.term).length;
+  return `
+    ${tabBar()}
+    <h1>Billing</h1>
+    <div class="sub">${fmtMoney(monthlyTotal)}/mo across ${active} client${active===1?'':'s'} on a recurring plan</div>
+    <div class="statgrid" style="grid-template-columns:repeat(2,1fr); max-width:520px;">
+      <div class="statcard accent"><div class="l">Recurring / mo</div><div class="big">${fmtMoney(monthlyTotal)}</div><div class="foot">normalized to monthly</div></div>
+      <div class="statcard"><div class="l">On a plan</div><div class="big">${active}<small>/${list.length}</small></div><div class="foot">clients billed</div></div>
+    </div>
+    <div class="card" style="padding:6px 20px;">
+      ${items || '<div class="empty">No clients yet.</div>'}
+    </div>
+    <div class="status-line">Click into a client under the Clients tab to add or edit their billing.</div>
+  `;
+}
+function wireBilling() { wireTabBar(); }
+
+/* ================= TEAM ================= */
+async function teamScreen() {
+  const { data: team } = await supabase_client.rpc('coach_portal_team_list', { p_token: token });
+  const rows = (team || []).map(m => `
+    <div class="row">
+      <div>
+        <div class="name">${esc(m.name)} <span class="chip ${m.is_primary ? 'head' : 'assistant'}">${m.is_primary ? 'Head Coach' : 'Assistant'}</span></div>
+        <div class="meta">${esc(m.phone || 'no phone on file')} · ${m.client_count} client${m.client_count===1?'':'s'} assigned</div>
+        ${!m.is_primary && coachInfo.is_head ? `<div class="invite-box" style="margin-top:8px;"><input type="text" readonly value="${escAttr(window.location.origin + window.location.pathname + '?key=' + m.access_token)}" id="teamlink-${m.id}"><button class="btn btn-ghost btn-sm" data-copy-team="${m.id}">Copy</button></div>` : ''}
+      </div>
+      ${!m.is_primary && coachInfo.is_head ? `<button class="btn btn-danger btn-sm" data-remove-coach="${m.id}">Remove</button>` : ''}
+    </div>
+  `).join('');
+  return `
+    ${tabBar()}
+    <h1>Team</h1>
+    <div class="sub">${coachInfo.is_head ? 'Add assistant coaches and share their private dashboard link.' : 'Your coaching team.'}</div>
+    <div class="card" style="padding:6px 20px;">${rows || '<div class="empty">No team members yet.</div>'}</div>
+    ${coachInfo.is_head ? `
+    <div class="card">
+      <label>Add assistant coach</label>
+      <div class="field"><input type="text" id="tcName" placeholder="Full name"></div>
+      <div class="field"><input type="tel" id="tcPhone" placeholder="Phone (optional)"></div>
+      <button class="btn btn-primary btn-block" id="addCoachBtn">+ Add Coach</button>
+    </div>` : ''}
+  `;
+}
+function wireTeam() {
+  wireTabBar();
+  document.querySelectorAll('[data-copy-team]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-copy-team');
+      const el = document.getElementById('teamlink-' + id);
+      el.select();
+      navigator.clipboard?.writeText(el.value).catch(() => document.execCommand('copy'));
+      toast('Link copied');
+    });
+  });
+  document.querySelectorAll('[data-remove-coach]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Remove this coach? Their clients will be reassigned to you.')) return;
+      const { error } = await supabase_client.rpc('coach_portal_remove_coach', { p_token: token, p_coach_id: btn.getAttribute('data-remove-coach') });
+      if (error) { toast('Error: ' + error.message); return; }
+      await render();
+      toast('Coach removed');
+    });
+  });
+  const addBtn = document.getElementById('addCoachBtn');
+  if (addBtn) addBtn.addEventListener('click', async () => {
+    const name = document.getElementById('tcName').value.trim();
+    const phone = document.getElementById('tcPhone').value.trim();
+    if (!name) { toast('Name is required'); return; }
+    const { error } = await supabase_client.rpc('coach_portal_add_coach', { p_token: token, p_name: name, p_phone: phone });
+    if (error) { toast('Error: ' + error.message); return; }
+    await render();
+    toast(name + ' added — copy their link below to share it');
+  });
+}
+
+/* ================= REMINDERS + CELEBRATIONS ================= */
+const REMINDER_RULES = {
+  attention: { label: 'Needs Attention', trigger: '9–13 days since last check-in', msg: n => `Hey ${n}, just checking in — haven't seen your weekly check-in yet. No pressure, just want to make sure you're good!` },
+  overdue: { label: 'Overdue Check-In', trigger: '14+ days since last check-in', msg: n => `Hey ${n}, it's been a couple weeks since your last check-in. Let's get you back on track — send over your numbers whenever you get a chance, even if it's not your best week.` },
+  'low-adherence': { label: 'Low Adherence', trigger: 'adherence scored 4 or below', msg: n => `Hey ${n}, saw adherence was a bit lower this week — totally normal, everyone has those. What got in the way? Let's figure out a plan that fits your week better.` },
+  streak: { label: 'Streak Shoutout', trigger: '4+ check-ins in a row with adherence 8+', msg: (n, s) => `Hey ${n}, you've been crushing it lately — ${s} strong check-ins in a row with great adherence. Proud of the consistency, keep it up!` },
+};
+function dueRulesFor(c) {
+  const due = [];
+  const age = daysAgo(c.last_checkin_date);
+  if (age !== null) {
+    if (age >= 9 && age <= 13) due.push('attention');
+    if (age >= 14) due.push('overdue');
+  }
+  if (c.last_adherence !== null && c.last_adherence <= 4) due.push('low-adherence');
+  const recent = c.recent_adherence || [];
+  if (c.checkin_count >= 4 && recent.length >= 4 && recent.every(a => a >= 8)) due.push('streak');
+  return due;
+}
+const CELEB_MILESTONES = [10, 25, 50, 100];
+async function remindersScreen() {
+  const sub = view.remindersSub || 'reminders';
+  let cards = [];
+  if (sub === 'reminders') {
+    const { data: clientsData } = await supabase_client.rpc('coach_portal_reminder_data', { p_token: token });
+    const { data: recentSent } = await supabase_client.rpc('coach_portal_recent_reminders', { p_token: token });
+    const sentSet = new Set((recentSent || []).map(r => r.client_id + ':' + r.rule_key));
+    (clientsData || []).forEach(c => {
+      dueRulesFor(c).forEach(ruleKey => {
+        if (sentSet.has(c.client_id + ':' + ruleKey)) return;
+        const rule = REMINDER_RULES[ruleKey];
+        const msg = rule.msg(c.client_name.split(' ')[0], (c.recent_adherence || []).length);
+        cards.push({ label: rule.label, trigger: rule.trigger, name: c.client_name, msg, clientId: c.client_id, ruleKey, kind: 'reminder' });
+      });
+    });
+  } else {
+    const { data: celebData } = await supabase_client.rpc('coach_portal_celebration_data', { p_token: token });
+    const { data: recentCeleb } = await supabase_client.rpc('coach_portal_recent_celebrations', { p_token: token });
+    const sentSet = new Set((recentCeleb || []).map(r => r.client_id + ':' + r.celeb_key));
+    (celebData || []).forEach(c => {
+      const first = c.client_name.split(' ')[0];
+      (c.recent_prs || []).forEach(pr => {
+        const key = 'pr-' + pr.exercise.toLowerCase().replace(/\s+/g,'-');
+        if (sentSet.has(c.client_id + ':' + key)) return;
+        cards.push({ label: 'New PR', trigger: pr.exercise + ' — ' + pr.weight + ' lb', name: c.client_name,
+          msg: `Hey ${first}, huge news — new PR on ${pr.exercise} at ${pr.weight} lb! All that work is paying off. Keep it up!`,
+          clientId: c.client_id, ruleKey: key, kind: 'celeb' });
+      });
+      const milestone = CELEB_MILESTONES.filter(m => c.checkin_count >= m).pop();
+      if (milestone) {
+        const key = 'milestone-' + milestone;
+        if (!sentSet.has(c.client_id + ':' + key)) {
+          cards.push({ label: 'Check-In Milestone', trigger: milestone + ' total check-ins', name: c.client_name,
+            msg: `Hey ${first}, you just hit ${milestone} check-ins with me — that kind of consistency is exactly what gets results. Really proud of you!`,
+            clientId: c.client_id, ruleKey: key, kind: 'celeb' });
+        }
+      }
+      if (c.weight_change_30d !== null && c.weight_change_30d <= -5) {
+        const key = 'weightloss-30d';
+        if (!sentSet.has(c.client_id + ':' + key)) {
+          cards.push({ label: 'Progress Milestone', trigger: Math.abs(c.weight_change_30d).toFixed(1) + ' lb down in 30 days', name: c.client_name,
+            msg: `Hey ${first}, you're down ${Math.abs(c.weight_change_30d).toFixed(1)} lb over the last 30 days — that's real progress. Awesome work!`,
+            clientId: c.client_id, ruleKey: key, kind: 'celeb' });
+        }
+      }
+    });
+  }
+  const cardsHtml = cards.map(c => `
+    <div class="reminder-card">
+      <div style="flex:1;">
+        <div class="reminder-rule ${c.kind==='celeb'?'celeb':''}">${esc(c.label)}</div>
+        <div class="name">${esc(c.name)}</div>
+        <div class="meta">${esc(c.trigger)}</div>
+        <div class="reminder-msg">${esc(c.msg)}</div>
+      </div>
+      <button class="btn btn-sm" data-send="${c.kind}" data-client="${c.clientId}" data-rule="${c.ruleKey}" data-msg="${escAttr(c.msg)}">Send</button>
+    </div>
+  `).join('');
+  return `
+    ${tabBar()}
+    <h1>Reminders</h1>
+    <div class="segrow" style="max-width:360px;">
+      <button class="${sub==='reminders'?'sel':''}" data-sub="reminders">Reminders</button>
+      <button class="${sub==='celebrations'?'sel':''}" data-sub="celebrations">Celebrations</button>
+    </div>
+    <div class="sub">${cards.length ? cards.length + ' item' + (cards.length===1?'':'s') + (sub==='reminders' ? ' due for a nudge' : ' worth celebrating') : (sub==='reminders' ? 'Everyone is on track — nothing due right now.' : 'Nothing to celebrate yet — check back after more check-ins and logged workouts.')}</div>
+    <div class="card" style="padding:6px 20px;">
+      ${cardsHtml || '<div class="empty">Nothing here right now.</div>'}
+    </div>
+  `;
+}
+function wireReminders() {
+  wireTabBar();
+  document.querySelectorAll('[data-sub]').forEach(btn => {
+    btn.addEventListener('click', () => { view.remindersSub = btn.getAttribute('data-sub'); render(); });
+  });
+  document.querySelectorAll('[data-send]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const kind = btn.getAttribute('data-send');
+      const clientId = btn.getAttribute('data-client');
+      const ruleKey = btn.getAttribute('data-rule');
+      const msg = btn.getAttribute('data-msg');
+      const rpc = kind === 'celeb' ? 'coach_portal_send_celebration' : 'coach_portal_send_reminder';
+      const params = kind === 'celeb'
+        ? { p_token: token, p_client_id: clientId, p_celeb_key: ruleKey, p_message: msg }
+        : { p_token: token, p_client_id: clientId, p_rule_key: ruleKey, p_message: msg };
+      const { error } = await supabase_client.rpc(rpc, params);
+      if (error) { toast('Error: ' + error.message); return; }
+      await render();
+      toast('Sent');
+    });
+  });
+}
+
+/* ================= PROGRAMS ================= */
+function blankWorkoutDraft() { return { name: '', tag: '', summary: '', days: [{ name: 'Day 1', cardio: '', exercises: [{ name: '', sets_reps: '' }] }] }; }
+function blankMealDraft() { return { name: '', tag: '', calories: '', protein: '', fat: '', carbs: '', meals: [], swaps: [] }; }
+
+async function programsScreen() {
+  if (!workoutDraft) workoutDraft = blankWorkoutDraft();
+  if (!mealDraft) mealDraft = blankMealDraft();
+  const { data: workouts } = await supabase_client.rpc('coach_portal_list_workouts', { p_token: token });
+  const { data: mealPlans } = await supabase_client.rpc('coach_portal_list_meal_plans', { p_token: token });
+  const wRows = (workouts || []).map(w => `<div class="row"><div><div class="name">${esc(w.name)}${w.business_id === null ? '<span class="stock-badge">Stock</span>' : ''}</div><div class="meta">${esc(w.tag || '')}${w.summary ? ' · ' + esc(w.summary) : ''}</div></div></div>`).join('');
+  const mRows = (mealPlans || []).map(m => `<div class="row"><div><div class="name">${esc(m.name)}${m.business_id === null ? '<span class="stock-badge">Stock</span>' : ''}</div><div class="meta">${[m.target_calories && m.target_calories + ' cal', m.target_protein && m.target_protein + 'p', m.target_fat && m.target_fat + 'f', m.target_carbs && m.target_carbs + 'c'].filter(Boolean).join(' · ')}</div></div></div>`).join('');
+
+  const daysHtml = workoutDraft.days.map((d, di) => `
+    <div class="day-card">
+      <div class="day-card-head">
+        <input type="text" class="day-card-name-input" data-day-name="${di}" value="${escAttr(d.name)}" placeholder="Day name" style="border:none;background:none;padding:0;font-size:14px;">
+        ${workoutDraft.days.length > 1 ? `<button class="rm-btn" data-rm-day="${di}">✕</button>` : ''}
+      </div>
+      ${d.exercises.map((ex, ei) => `
+        <div class="ex-row">
+          <input type="text" data-ex-name="${di}:${ei}" value="${escAttr(ex.name)}" placeholder="Exercise name">
+          <input type="text" class="sets" data-ex-sets="${di}:${ei}" value="${escAttr(ex.sets_reps)}" placeholder="3x10">
+          <button class="rm-btn" data-rm-ex="${di}:${ei}">✕</button>
+        </div>
+      `).join('')}
+      <button type="button" class="add-line-btn" data-add-ex="${di}">+ Add exercise</button>
+      <div class="field" style="margin-top:8px; margin-bottom:0;"><input type="text" data-day-cardio="${di}" value="${escAttr(d.cardio || '')}" placeholder="Optional cardio note"></div>
+    </div>
+  `).join('');
+
+  const mealsHtml = mealDraft.meals.map((m, mi) => `
+    <div class="meal-card">
+      <div class="day-card-head">
+        <input type="text" data-meal-name="${mi}" value="${escAttr(m.name)}" placeholder="Meal name" style="border:none;background:none;padding:0;font-weight:700;font-size:14px;">
+        <button class="rm-btn" data-rm-meal="${mi}">✕</button>
+      </div>
+      <div class="row3" style="margin-bottom:8px;">
+        <input type="number" data-meal-cal="${mi}" value="${escAttr(String(m.calories||''))}" placeholder="Cal">
+        <input type="number" data-meal-protein="${mi}" value="${escAttr(String(m.protein||''))}" placeholder="Protein g">
+        <input type="number" data-meal-carbs="${mi}" value="${escAttr(String(m.carbs||''))}" placeholder="Carbs g">
+      </div>
+      <input type="text" data-meal-items="${mi}" value="${escAttr(m.items_text||'')}" placeholder="e.g. chicken, rice, broccoli">
+    </div>
+  `).join('');
+
+  const swaps = Array.isArray(mealDraft.swaps) ? mealDraft.swaps : [];
+  const swapsHtml = swaps.map((g, gi) => `
+    <div class="meal-card">
+      <div class="day-card-head">
+        <input type="text" data-swap-title="${gi}" value="${escAttr(g.title||'')}" placeholder="Group title (e.g. Protein swaps)" style="border:none;background:none;padding:0;font-weight:700;font-size:14px;">
+        <button class="rm-btn" data-rm-swap="${gi}">✕</button>
+      </div>
+      <input type="text" data-swap-note="${gi}" value="${escAttr(g.note||'')}" placeholder="Short note (e.g. each portion ≈ same protein)" style="margin-bottom:8px;">
+      ${(g.items||[]).map((it, ii) => `
+        <div class="ex-row">
+          <input type="text" data-swap-item-name="${gi}:${ii}" value="${escAttr(it.name||'')}" placeholder="Food">
+          <input type="text" class="sets" data-swap-item-amt="${gi}:${ii}" value="${escAttr(it.amount||'')}" placeholder="6 oz">
+          <button class="rm-btn" data-rm-swap-item="${gi}:${ii}">✕</button>
+        </div>
+      `).join('')}
+      <button type="button" class="add-line-btn" data-add-swap-item="${gi}">+ Add food</button>
+    </div>
+  `).join('');
+
+  return `
+    ${tabBar()}
+    <h1>Programs</h1>
+    <div class="sub">Workout splits and meal plans you can assign to clients.</div>
+    <div class="grid2">
+      <div>
+        <h2 style="margin-top:0;">Workout Splits</h2>
+        <div class="card" style="padding:6px 20px;">${wRows || '<div class="empty">None yet.</div>'}</div>
+        <div class="card">
+          <button type="button" class="btn btn-ghost btn-block" id="aiWorkoutBtn" style="margin-bottom:14px; border-color:var(--accent); color:var(--accent-strong);">✦ Generate a draft with AI</button>
+          <div class="field"><label>Name</label><input type="text" id="wName" value="${escAttr(workoutDraft.name)}" placeholder="e.g. Upper / Lower 3-Day"></div>
+          <div class="field"><label>Tag</label><input type="text" id="wTag" value="${escAttr(workoutDraft.tag)}" placeholder="e.g. 3-Day Split"></div>
+          <label>Days</label>
+          ${daysHtml}
+          <button type="button" class="add-line-btn" id="addDayBtn">+ Add day</button>
+          <div class="field" style="margin-top:14px;"><label>Extra notes (optional)</label><textarea id="wSummary" placeholder="Anything else worth noting">${esc(workoutDraft.summary)}</textarea></div>
+          <button class="btn btn-primary btn-block" id="addWorkoutBtn" style="margin-top:6px;">+ Save Workout Split</button>
+        </div>
+      </div>
+      <div>
+        <h2 style="margin-top:0;">Meal Plans</h2>
+        <div class="card" style="padding:6px 20px;">${mRows || '<div class="empty">None yet.</div>'}</div>
+        <div class="card">
+          <button type="button" class="btn btn-ghost btn-block" id="aiMealBtn" style="margin-bottom:14px; border-color:var(--accent); color:var(--accent-strong);">✦ Generate a draft with AI</button>
+          <div class="field"><label>Name</label><input type="text" id="mName" value="${escAttr(mealDraft.name)}" placeholder="e.g. Lean Cut"></div>
+          <div class="field"><label>Tag</label><input type="text" id="mTag" value="${escAttr(mealDraft.tag)}" placeholder="e.g. Fat Loss"></div>
+          <div class="row2">
+            <div class="field"><label>Calories</label><input type="number" id="mCal" value="${escAttr(String(mealDraft.calories))}" placeholder="2000"></div>
+            <div class="field"><label>Protein (g)</label><input type="number" id="mProtein" value="${escAttr(String(mealDraft.protein))}" placeholder="180"></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label>Fat (g)</label><input type="number" id="mFat" value="${escAttr(String(mealDraft.fat))}" placeholder="55"></div>
+            <div class="field"><label>Carbs (g)</label><input type="number" id="mCarbs" value="${escAttr(String(mealDraft.carbs))}" placeholder="180"></div>
+          </div>
+          <label>Meals</label>
+          ${mealsHtml || '<div class="status-line">No individual meals added — use auto-generate or add them manually.</div>'}
+          <div class="row2" style="margin-top:6px;">
+            <button type="button" class="add-line-btn" id="addMealLineBtn">+ Add meal</button>
+            <button type="button" class="add-line-btn" id="autoGenBtn">✦ Auto-generate 4 meals</button>
+          </div>
+          <label style="margin-top:16px;display:block;">Flexible swaps <span style="font-weight:400;color:var(--muted,#8b8d93);font-size:12px;">(optional — lets clients trade foods)</span></label>
+          ${swapsHtml || '<div class="status-line">No swaps yet — add a group like "Protein swaps" so clients can trade foods while keeping macros on target.</div>'}
+          <button type="button" class="add-line-btn" id="addSwapGroupBtn" style="margin-top:6px;">+ Add swap group</button>
+          <button class="btn btn-primary btn-block" id="addMealBtn" style="margin-top:14px;">+ Save Meal Plan</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+function syncWorkoutDraftFromDom() {
+  document.querySelectorAll('[data-day-name]').forEach(el => { workoutDraft.days[+el.getAttribute('data-day-name')].name = el.value; });
+  document.querySelectorAll('[data-day-cardio]').forEach(el => { workoutDraft.days[+el.getAttribute('data-day-cardio')].cardio = el.value; });
+  document.querySelectorAll('[data-ex-name]').forEach(el => {
+    const [di, ei] = el.getAttribute('data-ex-name').split(':').map(Number);
+    workoutDraft.days[di].exercises[ei].name = el.value;
+  });
+  document.querySelectorAll('[data-ex-sets]').forEach(el => {
+    const [di, ei] = el.getAttribute('data-ex-sets').split(':').map(Number);
+    workoutDraft.days[di].exercises[ei].sets_reps = el.value;
+  });
+  const wn = document.getElementById('wName'), wt = document.getElementById('wTag'), ws = document.getElementById('wSummary');
+  if (wn) workoutDraft.name = wn.value; if (wt) workoutDraft.tag = wt.value; if (ws) workoutDraft.summary = ws.value;
+}
+function syncMealDraftFromDom() {
+  document.querySelectorAll('[data-meal-name]').forEach(el => { mealDraft.meals[+el.getAttribute('data-meal-name')].name = el.value; });
+  document.querySelectorAll('[data-meal-cal]').forEach(el => { mealDraft.meals[+el.getAttribute('data-meal-cal')].calories = el.value; });
+  document.querySelectorAll('[data-meal-protein]').forEach(el => { mealDraft.meals[+el.getAttribute('data-meal-protein')].protein = el.value; });
+  document.querySelectorAll('[data-meal-carbs]').forEach(el => { mealDraft.meals[+el.getAttribute('data-meal-carbs')].carbs = el.value; });
+  document.querySelectorAll('[data-meal-items]').forEach(el => { mealDraft.meals[+el.getAttribute('data-meal-items')].items_text = el.value; });
+  const mn = document.getElementById('mName'), mt = document.getElementById('mTag'), mc = document.getElementById('mCal'),
+        mp = document.getElementById('mProtein'), mf = document.getElementById('mFat'), mcb = document.getElementById('mCarbs');
+  if (mn) mealDraft.name = mn.value; if (mt) mealDraft.tag = mt.value; if (mc) mealDraft.calories = mc.value;
+  if (mp) mealDraft.protein = mp.value; if (mf) mealDraft.fat = mf.value; if (mcb) mealDraft.carbs = mcb.value;
+  if (!Array.isArray(mealDraft.swaps)) mealDraft.swaps = [];
+  document.querySelectorAll('[data-swap-title]').forEach(el => { const gi = +el.getAttribute('data-swap-title'); if (mealDraft.swaps[gi]) mealDraft.swaps[gi].title = el.value; });
+  document.querySelectorAll('[data-swap-note]').forEach(el => { const gi = +el.getAttribute('data-swap-note'); if (mealDraft.swaps[gi]) mealDraft.swaps[gi].note = el.value; });
+  document.querySelectorAll('[data-swap-item-name]').forEach(el => { const [gi, ii] = el.getAttribute('data-swap-item-name').split(':').map(Number); if (mealDraft.swaps[gi] && mealDraft.swaps[gi].items[ii]) mealDraft.swaps[gi].items[ii].name = el.value; });
+  document.querySelectorAll('[data-swap-item-amt]').forEach(el => { const [gi, ii] = el.getAttribute('data-swap-item-amt').split(':').map(Number); if (mealDraft.swaps[gi] && mealDraft.swaps[gi].items[ii]) mealDraft.swaps[gi].items[ii].amount = el.value; });
+}
+async function rerenderPrograms() {
+  app.innerHTML = topBar() + `<div class="container">${await programsScreen()}</div>`;
+  wirePrograms();
+}
+function wirePrograms() {
+  wireTabBar();
+  const aiwb = document.getElementById('aiWorkoutBtn'); if (aiwb) aiwb.addEventListener('click', () => openAiModal('workout'));
+  const aimb = document.getElementById('aiMealBtn'); if (aimb) aimb.addEventListener('click', () => openAiModal('meal'));
+  document.getElementById('addDayBtn').addEventListener('click', () => {
+    syncWorkoutDraftFromDom();
+    workoutDraft.days.push({ name: 'Day ' + (workoutDraft.days.length + 1), cardio: '', exercises: [{ name: '', sets_reps: '' }] });
+    rerenderPrograms();
+  });
+  document.querySelectorAll('[data-rm-day]').forEach(btn => btn.addEventListener('click', () => {
+    syncWorkoutDraftFromDom();
+    workoutDraft.days.splice(+btn.getAttribute('data-rm-day'), 1);
+    rerenderPrograms();
+  }));
+  document.querySelectorAll('[data-add-ex]').forEach(btn => btn.addEventListener('click', () => {
+    syncWorkoutDraftFromDom();
+    workoutDraft.days[+btn.getAttribute('data-add-ex')].exercises.push({ name: '', sets_reps: '' });
+    rerenderPrograms();
+  }));
+  document.querySelectorAll('[data-rm-ex]').forEach(btn => btn.addEventListener('click', () => {
+    syncWorkoutDraftFromDom();
+    const [di, ei] = btn.getAttribute('data-rm-ex').split(':').map(Number);
+    workoutDraft.days[di].exercises.splice(ei, 1);
+    rerenderPrograms();
+  }));
+  document.getElementById('addWorkoutBtn').addEventListener('click', async () => {
+    syncWorkoutDraftFromDom();
+    if (!workoutDraft.name.trim()) { toast('Workout name is required'); return; }
+    const days = workoutDraft.days.map(d => ({ name: d.name, cardio: d.cardio, exercises: d.exercises.filter(e => e.name.trim()) }));
+    const { error } = await supabase_client.rpc('coach_portal_add_workout', { p_token: token, p_name: workoutDraft.name.trim(), p_tag: workoutDraft.tag.trim(), p_summary: workoutDraft.summary.trim(), p_days: days });
+    if (error) { toast('Error: ' + error.message); return; }
+    workoutDraft = blankWorkoutDraft();
+    await rerenderPrograms();
+    toast('Workout split saved');
+  });
+
+  document.getElementById('addMealLineBtn').addEventListener('click', () => {
+    syncMealDraftFromDom();
+    mealDraft.meals.push({ name: '', calories: '', protein: '', fat: '', carbs: '', items_text: '' });
+    rerenderPrograms();
+  });
+  document.querySelectorAll('[data-rm-meal]').forEach(btn => btn.addEventListener('click', () => {
+    syncMealDraftFromDom();
+    mealDraft.meals.splice(+btn.getAttribute('data-rm-meal'), 1);
+    rerenderPrograms();
+  }));
+  document.getElementById('autoGenBtn').addEventListener('click', () => {
+    syncMealDraftFromDom();
+    const cal = Number(mealDraft.calories) || 2000, pro = Number(mealDraft.protein) || 150, fat = Number(mealDraft.fat) || 60, carb = Number(mealDraft.carbs) || 200;
+    const names = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
+    const splits = [0.25, 0.35, 0.3, 0.1];
+    mealDraft.meals = names.map((n, i) => ({
+      name: n, calories: Math.round(cal * splits[i]), protein: Math.round(pro * splits[i]),
+      fat: Math.round(fat * splits[i]), carbs: Math.round(carb * splits[i]), items_text: ''
+    }));
+    rerenderPrograms();
+    toast('Auto-generated 4 meals from your macro targets');
+  });
+  document.getElementById('addSwapGroupBtn').addEventListener('click', () => {
+    syncMealDraftFromDom();
+    if (!Array.isArray(mealDraft.swaps)) mealDraft.swaps = [];
+    const title = mealDraft.swaps.length === 0 ? 'Protein swaps' : (mealDraft.swaps.length === 1 ? 'Carb swaps' : '');
+    mealDraft.swaps.push({ title, note: '', items: [{ name: '', amount: '' }] });
+    rerenderPrograms();
+  });
+  document.querySelectorAll('[data-rm-swap]').forEach(btn => btn.addEventListener('click', () => {
+    syncMealDraftFromDom();
+    mealDraft.swaps.splice(+btn.getAttribute('data-rm-swap'), 1);
+    rerenderPrograms();
+  }));
+  document.querySelectorAll('[data-add-swap-item]').forEach(btn => btn.addEventListener('click', () => {
+    syncMealDraftFromDom();
+    mealDraft.swaps[+btn.getAttribute('data-add-swap-item')].items.push({ name: '', amount: '' });
+    rerenderPrograms();
+  }));
+  document.querySelectorAll('[data-rm-swap-item]').forEach(btn => btn.addEventListener('click', () => {
+    syncMealDraftFromDom();
+    const [gi, ii] = btn.getAttribute('data-rm-swap-item').split(':').map(Number);
+    mealDraft.swaps[gi].items.splice(ii, 1);
+    rerenderPrograms();
+  }));
+  document.getElementById('addMealBtn').addEventListener('click', async () => {
+    syncMealDraftFromDom();
+    if (!mealDraft.name.trim()) { toast('Meal plan name is required'); return; }
+    const cleanSwaps = (Array.isArray(mealDraft.swaps) ? mealDraft.swaps : [])
+      .map(g => ({ title: (g.title||'').trim(), note: (g.note||'').trim(), items: (g.items||[]).filter(it => (it.name||'').trim()).map(it => ({ name: it.name.trim(), amount: (it.amount||'').trim() })) }))
+      .filter(g => g.title && g.items.length);
+    const { error } = await supabase_client.rpc('coach_portal_add_meal_plan', {
+      p_token: token, p_name: mealDraft.name.trim(), p_tag: mealDraft.tag.trim(),
+      p_calories: mealDraft.calories ? Number(mealDraft.calories) : null, p_protein: mealDraft.protein ? Number(mealDraft.protein) : null,
+      p_fat: mealDraft.fat ? Number(mealDraft.fat) : null, p_carbs: mealDraft.carbs ? Number(mealDraft.carbs) : null,
+      p_meals: mealDraft.meals.filter(m => m.name.trim()), p_swaps: cleanSwaps
+    });
+    if (error) { toast('Error: ' + error.message); return; }
+    mealDraft = blankMealDraft();
+    await rerenderPrograms();
+    toast('Meal plan saved');
+  });
+}
+
+/* ================= AI PLAN GENERATOR ================= */
+function openAiModal(kind) {
+  const isMeal = kind === 'meal';
+  modalHost.innerHTML = `
+    <div class="modal-overlay" data-close-modal>
+      <div class="modal">
+        <div class="modal-head"><h2>✦ Generate ${isMeal ? 'Meal Plan' : 'Workout Split'}</h2><button class="modal-x" data-close-modal>×</button></div>
+        <div class="field"><label>Client goal</label><input type="text" id="aiGoal" placeholder="e.g. lose fat, keep strength" autocomplete="off"></div>
+        ${isMeal ? `
+        <div class="row2">
+          <div class="field"><label>Calories</label><input type="number" id="aiCal" placeholder="2200"></div>
+          <div class="field"><label>Protein (g)</label><input type="number" id="aiPro" placeholder="170"></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>Fat (g)</label><input type="number" id="aiFat" placeholder="70"></div>
+          <div class="field"><label>Carbs (g)</label><input type="number" id="aiCarb" placeholder="223"></div>
+        </div>` : `
+        <div class="field"><label>Training days / week</label><input type="number" id="aiDays" placeholder="5"></div>`}
+        <div class="field" style="margin-bottom:6px;"><label>Notes / preferences (optional)</label><textarea id="aiNotes" placeholder="e.g. no dairy, trains at a commercial gym, sensitive knees"></textarea></div>
+        <button class="btn btn-primary btn-block" id="aiGenBtn">✦ Generate Draft</button>
+        <div class="status-line" id="aiStatus" style="margin-top:10px; text-align:center;"></div>
+        <div class="status-line" style="margin-top:2px; text-align:center;">The draft loads into your builder below — review, edit, then Save.</div>
+      </div>
+    </div>`;
+  document.getElementById('aiGoal').focus();
+  wireModalClose();
+  document.getElementById('aiGenBtn').addEventListener('click', () => runAiGenerate(kind));
+}
+async function runAiGenerate(kind) {
+  const goal = document.getElementById('aiGoal').value.trim();
+  const notes = document.getElementById('aiNotes').value.trim();
+  const status = document.getElementById('aiStatus');
+  const btn = document.getElementById('aiGenBtn');
+  const reqBody = { token, kind, goal, notes };
+  if (kind === 'meal') {
+    reqBody.macros = {
+      calories: Number(document.getElementById('aiCal').value) || null,
+      protein: Number(document.getElementById('aiPro').value) || null,
+      fat: Number(document.getElementById('aiFat').value) || null,
+      carbs: Number(document.getElementById('aiCarb').value) || null,
+    };
+  } else {
+    reqBody.days = Number(document.getElementById('aiDays').value) || null;
+  }
+  btn.disabled = true; status.textContent = 'Generating… this takes a few seconds.';
+  try {
+    const { data, error } = await supabase_client.functions.invoke('ai-generate-plan', { body: reqBody });
+    if (error) { status.textContent = 'Error: ' + error.message; btn.disabled = false; return; }
+    if (data && data.error) { status.textContent = data.error; btn.disabled = false; return; }
+    const plan = data && data.plan;
+    if (!plan) { status.textContent = 'No plan came back — try again.'; btn.disabled = false; return; }
+    if (kind === 'meal') {
+      mealDraft = {
+        name: plan.name || '', tag: plan.tag || '',
+        calories: plan.calories || '', protein: plan.protein || '', fat: plan.fat || '', carbs: plan.carbs || '',
+        meals: (Array.isArray(plan.meals) ? plan.meals : []).map(m => ({ name: m.name||'', calories: m.calories||'', protein: m.protein||'', fat: m.fat||'', carbs: m.carbs||'', items_text: m.items_text||'' })),
+        swaps: (Array.isArray(plan.swaps) ? plan.swaps : []).map(g => ({ title: g.title||'', note: g.note||'', items: (Array.isArray(g.items) ? g.items : []).map(it => ({ name: it.name||'', amount: it.amount||'' })) }))
+      };
+    } else {
+      const days = (Array.isArray(plan.days) && plan.days.length) ? plan.days : [{ name: 'Day 1', cardio: '', exercises: [{ name: '', sets_reps: '' }] }];
+      workoutDraft = {
+        name: plan.name || '', tag: plan.tag || '', summary: plan.summary || '',
+        days: days.map(d => ({
+          name: d.name || '', cardio: d.cardio || '',
+          exercises: (Array.isArray(d.exercises) && d.exercises.length ? d.exercises : [{ name: '', sets_reps: '' }]).map(e => ({ name: e.name || '', sets_reps: e.sets_reps || '' }))
+        }))
+      };
+    }
+    closeModal();
+    await rerenderPrograms();
+    toast('AI draft ready — review and edit, then Save.');
+  } catch (e) {
+    status.textContent = 'Error: ' + (e && e.message ? e.message : String(e)); btn.disabled = false;
+  }
+}
+
+/* ================= ROSTER ================= */
+function statusFor(c) {
+  if (c.checkin_count === 0) {
+    return c.account_status === 'active' ? { label:'Awaiting check-in', cls:'muted' } : { label:'Invited', cls:'warn' };
+  }
+  const age = daysAgo(c.last_checkin_date);
+  if (age === null) return { label:'Awaiting check-in', cls:'muted' };
+  if (age >= 14) return { label:'Overdue', cls:'critical' };
+  if (age >= 9) return { label:'Slipping', cls:'warn' };
+  return { label:'On track', cls:'good' };
+}
+function miniSpark(points) {
+  const pts = (points || []).map(p => Number(p.weight)).filter(v => !isNaN(v));
+  const w = 74, h = 30;
+  if (pts.length < 2) return `<svg viewBox="0 0 ${w} ${h}" aria-hidden="true"><line x1="2" y1="${h/2}" x2="${w-2}" y2="${h/2}" stroke="var(--border)" stroke-width="2" stroke-linecap="round" stroke-dasharray="2 4"/></svg>`;
+  const min = Math.min(...pts), max = Math.max(...pts), range = (max - min) || 1;
+  const stepX = (w - 4) / (pts.length - 1);
+  const down = pts[pts.length-1] <= pts[0];
+  const color = down ? 'var(--good)' : 'var(--critical)';
+  const coords = pts.map((v, i) => [2 + i * stepX, h - 5 - ((v - min) / range) * (h - 10)]);
+  const path = coords.map((c, i) => (i===0?'M':'L') + c[0].toFixed(1) + ',' + c[1].toFixed(1)).join(' ');
+  return `<svg viewBox="0 0 ${w} ${h}" aria-hidden="true"><path d="${path}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+}
+function trendCell(c) {
+  const pts = (c.weight_points || []).map(p => Number(p.weight)).filter(v => !isNaN(v));
+  let delta = '';
+  if (pts.length >= 2) {
+    const d = pts[pts.length-1] - pts[0];
+    const cls = d < 0 ? 'good' : (d > 0 ? 'bad' : 'flat');
+    delta = `<span class="delta ${cls}">${d>0?'+':''}${d.toFixed(1)} lb</span>`;
+  } else {
+    delta = `<span class="delta flat">—</span>`;
+  }
+  return `<div class="trend">${miniSpark(c.weight_points)}${delta}</div>`;
+}
+function computeStats(list) {
+  const total = list.length;
+  const active = list.filter(c => c.account_status === 'active');
+  const brandNew = list.filter(c => (c.checkin_count || 0) === 0).length;
+  const pending = list.filter(c => c.account_status !== 'active').length;
+  const checkedIn8 = active.filter(c => { const d = daysAgo(c.last_checkin_date); return d !== null && d <= 8; }).length;
+  const checkedInWeek = list.filter(c => { const d = daysAgo(c.last_checkin_date); return d !== null && d <= 7; }).length;
+  const needsAttention = active.filter(c => { const d = daysAgo(c.last_checkin_date); return d === null || d >= 9; }).length;
+  const adh = list.map(c => c.last_adherence).filter(a => a !== null && a !== undefined);
+  const avgAdh = adh.length ? (adh.reduce((s,a)=>s+a,0)/adh.length) : null;
+  return { total, activeCount: active.length, brandNew, pending, checkedIn8, checkedInWeek, needsAttention, avgAdh };
+}
+function rosterTableHtml() {
+  const q = rosterSearch.trim().toLowerCase();
+  const list = q ? clients.filter(c => (c.name||'').toLowerCase().includes(q)) : clients;
+  if (!list.length) {
+    return `<div class="roster"><div class="empty">${q ? 'No clients match "' + esc(rosterSearch) + '".' : 'No clients yet — add your first one with the button above.'}</div></div>`;
+  }
+  const rows = list.map(c => {
+    const st = statusFor(c);
+    const isNew = (c.checkin_count || 0) === 0 && c.account_status !== 'active';
+    return `<button class="roster-row" data-open="${c.id}">
+      <div class="cell-client">
+        <div class="avatar">${esc(initialsOf(c.name))}</div>
+        <div class="cell-name">${esc(c.name)}${isNew ? '<span class="newbadge">New</span>' : ''}</div>
+      </div>
+      <div class="cell-weight">${c.latest_weight != null ? Number(c.latest_weight) + ' <span>lb</span>' : '<span style="color:var(--muted)">—</span>'}</div>
+      <div class="cell-trend">${trendCell(c)}</div>
+      <div class="cell-check">${relDate(c.last_checkin_date)}</div>
+      <div><span class="chip ${st.cls}"><span class="dot"></span>${st.label}</span></div>
+      <div class="chev">›</div>
+    </button>`;
+  }).join('');
+  return `<div class="roster">
+    <div class="roster-head">
+      <div>Client</div><div>Weight</div><div>7-Day Trend</div><div>Last Check-In</div><div>Status</div><div></div>
+    </div>
+    ${rows}
+  </div>`;
+}
+function rosterScreen() {
+  const s = computeStats(clients);
+  const summary = [
+    `${s.total} total`,
+    `${s.checkedInWeek} checked in this week`,
+    s.pending ? `${s.pending} pending invite${s.pending===1?'':'s'}` : null,
+  ].filter(Boolean).join(' · ');
+  return `
+    ${tabBar()}
+    <h1>Clients</h1>
+    <div class="sub">${summary}</div>
+    <div class="toolbar">
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="rosterSearch" placeholder="Search clients…" value="${escAttr(rosterSearch)}" autocomplete="off">
+      </div>
+      <button class="btn btn-ghost" id="importBtn">↥ Import</button>
+      <button class="btn btn-primary" id="addClientBtn">+ Add Client</button>
+    </div>
+    <div class="statgrid">
+      <div class="statcard"><div class="l">Total Clients</div><div class="big">${s.total}</div><div class="foot">${s.brandNew} brand new</div></div>
+      <div class="statcard good"><div class="l">Checked In</div><div class="big">${s.checkedIn8}<small>/${s.activeCount}</small></div><div class="foot">within the last 8 days</div></div>
+      <div class="statcard warn"><div class="l">Needs Attention</div><div class="big">${s.needsAttention}</div><div class="foot">overdue or slipping</div></div>
+      <div class="statcard accent"><div class="l">Avg Adherence</div><div class="big">${s.avgAdh != null ? s.avgAdh.toFixed(1) : '—'}<small>/10</small></div><div class="foot">most recent check-ins</div></div>
+    </div>
+    <div id="rosterTable">${rosterTableHtml()}</div>
+  `;
+}
+function openAddClientModal() {
+  modalHost.innerHTML = `
+    <div class="modal-overlay" data-close-modal>
+      <div class="modal">
+        <div class="modal-head"><h2>Add Client</h2><button class="modal-x" data-close-modal>×</button></div>
+        <div class="field"><label>Full name</label><input type="text" id="ncName" placeholder="Jane Smith" autocomplete="off"></div>
+        <div class="field"><label>Phone (optional)</label><input type="tel" id="ncPhone" placeholder="+1 555 123 4567"></div>
+        <button class="btn btn-primary btn-block" id="saveClientBtn">+ Add Client</button>
+        <div style="text-align:center; margin-top:10px;"><button class="back" id="switchBulk" style="margin:0;">or bulk import several at once →</button></div>
+      </div>
+    </div>`;
+  document.getElementById('ncName').focus();
+  wireModalClose();
+  document.getElementById('saveClientBtn').addEventListener('click', async () => {
+    const name = document.getElementById('ncName').value.trim();
+    const phone = document.getElementById('ncPhone').value.trim();
+    if (!name) { toast('Name is required'); return; }
+    const { error } = await supabase_client.rpc('coach_portal_add_client', { p_token: token, p_name: name, p_phone: phone });
+    if (error) { toast('Error: ' + error.message); return; }
+    closeModal();
+    await render();
+    toast(name + ' added');
+  });
+  document.getElementById('switchBulk').addEventListener('click', openBulkModal);
+}
+function openBulkModal() {
+  modalHost.innerHTML = `
+    <div class="modal-overlay" data-close-modal>
+      <div class="modal">
+        <div class="modal-head"><h2>Bulk Import</h2><button class="modal-x" data-close-modal>×</button></div>
+        <div class="field">
+          <label>One client per line — "Name, Phone" (phone optional)</label>
+          <textarea id="bulkText" style="min-height:130px;" placeholder="Jane Smith, 555-123-4567&#10;Mike Jones">${esc(bulkImportText)}</textarea>
+        </div>
+        <button class="btn btn-primary btn-block" id="bulkImportBtn">Import Clients</button>
+      </div>
+    </div>`;
+  wireModalClose();
+  document.getElementById('bulkImportBtn').addEventListener('click', async () => {
+    const text = document.getElementById('bulkText').value;
+    const rows = text.split('\n').map(line => {
+      const parts = line.split(',');
+      return { name: (parts[0]||'').trim(), phone: (parts[1]||'').trim() };
+    }).filter(r => r.name);
+    if (!rows.length) { toast('Paste at least one client line'); return; }
+    const { data, error } = await supabase_client.rpc('coach_portal_bulk_add_clients', { p_token: token, p_rows: rows });
+    if (error) { toast('Error: ' + error.message); return; }
+    bulkImportText = '';
+    closeModal();
+    await render();
+    toast(data + ' client' + (data===1?'':'s') + ' imported');
+  });
+}
+function closeModal() { modalHost.innerHTML = ''; }
+function wireModalClose() {
+  modalHost.querySelectorAll('[data-close-modal]').forEach(el => {
+    el.addEventListener('click', e => { if (e.target === el) closeModal(); });
+  });
+}
+function wireRoster() {
+  wireTabBar();
+  document.getElementById('addClientBtn').addEventListener('click', openAddClientModal);
+  document.getElementById('importBtn').addEventListener('click', openBulkModal);
+  const searchEl = document.getElementById('rosterSearch');
+  searchEl.addEventListener('input', e => {
+    rosterSearch = e.target.value;
+    document.getElementById('rosterTable').innerHTML = rosterTableHtml();
+    wireRosterRows();
+  });
+  wireRosterRows();
+}
+function wireRosterRows() {
+  document.querySelectorAll('[data-open]').forEach(btn => {
+    btn.addEventListener('click', () => { view.screen = 'detail'; view.clientId = btn.getAttribute('data-open'); view.detailTab = 'overview'; render(); });
+  });
+}
+
+/* ================= CLIENT DETAIL ================= */
+function sparklineSvg(points, w, h) {
+  if (points.length < 2) return '<div class="empty" style="padding:10px;">Not enough data for a chart yet.</div>';
+  const vals = points.map(p => p.weight);
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const range = (max - min) || 1;
+  const stepX = w / (points.length - 1);
+  const coords = points.map((p, i) => {
+    const x = i * stepX;
+    const y = h - ((p.weight - min) / range) * (h - 16) - 8;
+    return [x, y];
+  });
+  const path = coords.map((c, i) => (i === 0 ? 'M' : 'L') + c[0].toFixed(1) + ',' + c[1].toFixed(1)).join(' ');
+  const dots = coords.map(c => `<circle cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="3" fill="var(--accent-strong)" />`).join('');
+  return `<svg viewBox="0 0 ${w} ${h}" class="chart" preserveAspectRatio="none" style="overflow:visible;">
+    <path d="${path}" fill="none" stroke="var(--accent-strong)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke" />
+    ${dots}
+  </svg>`;
+}
+async function detailScreen() {
+  const client = clients.find(c => c.id === view.clientId);
+  const dt = view.detailTab;
+  let body = '';
+  if (dt === 'billing') {
+    const { data: billing } = await supabase_client.rpc('coach_portal_client_billing', { p_token: token, p_client_id: view.clientId });
+    const b = billing && billing[0];
+    body = `
+      <div class="card">
+        <label>Current billing</label>
+        ${b ? `<div class="bill-summary"><b>${fmtMoney(b.amount)}</b> / ${esc(b.term)}<div class="meta">${b.start_date} → ${b.end_date}</div></div>` : '<div class="empty">No billing on file.</div>'}
+      </div>
+      <div class="card">
+        <label>${b ? 'Update billing' : 'Add billing'}</label>
+        <div class="row2">
+          <div class="field"><label>Amount</label><input type="number" id="bAmount" value="${b ? b.amount : ''}" placeholder="150"></div>
+          <div class="field"><label>Term</label>
+            <select id="bTerm">
+              ${['Monthly','3 Months','6 Months','Annual','One-Time'].map(t => `<option value="${t}" ${b && b.term===t ? 'selected':''}>${t}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>Start date</label><input type="date" id="bStart" value="${b ? b.start_date : ''}"></div>
+          <div class="field"><label>End date</label><input type="date" id="bEnd" value="${b ? b.end_date : ''}"></div>
+        </div>
+        <button class="btn btn-primary btn-block" id="saveBillBtn">Save Billing</button>
+      </div>
+    `;
+  } else if (dt === 'messages') {
+    const { data: msgs } = await supabase_client.rpc('coach_portal_client_messages', { p_token: token, p_client_id: view.clientId });
+    const bubbles = (msgs || []).map(m => `<div class="bubble ${m.from_role}">${esc(m.text)}</div>`).join('');
+    body = `
+      <div class="card">
+        <div class="chat-thread">${bubbles || '<div class="empty">No messages yet.</div>'}</div>
+        <div class="chat-input-row">
+          <input type="text" id="msgInput" placeholder="Message ${esc(client.name.split(' ')[0])}…" value="${esc(msgDraft)}">
+          <button class="btn btn-primary" id="sendMsgBtn">Send</button>
+        </div>
+      </div>
+    `;
+  } else if (dt === 'progress') {
+    const { data: checkins } = await supabase_client.rpc('coach_portal_client_checkins', { p_token: token, p_client_id: view.clientId });
+    const { data: photos } = await supabase_client.rpc('coach_portal_client_photos', { p_token: token, p_client_id: view.clientId });
+    const { data: logs } = await supabase_client.rpc('coach_portal_client_workout_logs', { p_token: token, p_client_id: view.clientId });
+    const points = (checkins || []).slice().reverse().map(ci => ({ weight: Number(ci.weight), date: ci.date }));
+    progressPhotos = (photos || []).slice();
+    compareSelect = null;
+    const photoStrip = progressPhotos.map((p, i) => `<img src="${p.storage_path}" alt="progress photo ${p.date}" title="${p.date}" data-photo-idx="${i}">`).join('');
+    const logRows = {};
+    (logs || []).forEach(l => { (logRows[l.log_id] = logRows[l.log_id] || { date: l.date, day_name: l.day_name, exercises: [] }).exercises.push(l); });
+    const logsHtml = Object.values(logRows).slice(0, 8).map(l => `
+      <div class="checkin-item"><b>${l.date}</b> — ${esc(l.day_name)}<br>
+        ${l.exercises.map(e => `${esc(e.exercise)}: ${e.weight || '—'}${e.weight ? ' lb' : ''} × ${e.reps || '—'}${e.is_pr ? '<span class="pr-badge">PR</span>' : ''}`).join('<br>')}
+      </div>
+    `).join('');
+    body = `
+      <div class="card">
+        <label>Weight Trend</label>
+        ${sparklineSvg(points, 300, 120)}
+      </div>
+      <div class="card">
+        <div class="photo-strip-head">
+          <label style="margin:0;">Progress Photos</label>
+          ${progressPhotos.length >= 2 ? `<button class="btn btn-ghost" id="comparePhotosBtn" style="padding:6px 12px;font-size:13px;">Compare</button>` : ''}
+        </div>
+        ${progressPhotos.length ? `<div class="hint" id="photoHint" style="font-size:12px;color:var(--muted);margin-bottom:8px;">Tap a photo to view it full screen.</div>` : ''}
+        <div class="photo-strip">${photoStrip || '<div class="empty">No photos uploaded yet.</div>'}</div>
+      </div>
+      <div class="card">
+        <label>Workout Logs</label>
+        ${logsHtml || '<div class="empty">No workouts logged yet.</div>'}
+      </div>
+    `;
+  } else {
+    const { data: checkins } = await supabase_client.rpc('coach_portal_client_checkins', { p_token: token, p_client_id: view.clientId });
+    const { data: workouts } = await supabase_client.rpc('coach_portal_list_workouts', { p_token: token });
+    const { data: mealPlans } = await supabase_client.rpc('coach_portal_list_meal_plans', { p_token: token });
+    const link = window.location.origin + '/client-checkin.html?code=' + client.invite_code;
+    const rows = (checkins || []).map(ci => `
+      <div class="checkin-item"><b>${ci.date}</b> — ${ci.weight} lb · strength ${ci.strength ?? '—'} · adherence ${ci.adherence ?? '—'}/10${ci.notes ? '<br>' + esc(ci.notes) : ''}</div>
+    `).join('');
+    body = `
+      <div class="card">
+        <label>Invite link</label>
+        <div class="invite-box">
+          <input type="text" readonly value="${esc(link)}" id="inviteInput">
+          <button class="btn btn-ghost" id="copyBtn">Copy</button>
+        </div>
+        ${client.phone ? `<button class="btn btn-primary btn-block" id="textInviteBtn" style="margin-top:10px;">📱 Text Invite to ${esc(client.phone)}</button>` : `<div class="status-line" style="margin-top:8px;">Add a phone number for ${esc(client.name)} to text the invite directly.</div>`}
+        <div class="status-line" style="margin-top:8px;">No login needed on their end — opening this link is all it takes.</div>
+      </div>
+      <div class="card">
+        <label>Assigned Programs</label>
+        <div class="row2">
+          <div class="field"><label>Workout split</label>
+            <select id="assignWorkout">
+              <option value="">Not assigned</option>
+              ${(workouts || []).map(w => `<option value="${w.id}" ${client.assigned_workout_id === w.id ? 'selected' : ''}>${esc(w.name)}</option>`).join('')}
+            </select>
+          </div>
+          <div class="field"><label>Meal plan</label>
+            <select id="assignMeal">
+              <option value="">Not assigned</option>
+              ${(mealPlans || []).map(m => `<option value="${m.id}" ${client.assigned_meal_plan_id === m.id ? 'selected' : ''}>${esc(m.name)}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-block" id="saveAssignBtn">Save Assignment</button>
+      </div>
+      <div class="card" id="pdfCard">
+        <label>Meal Plan PDF</label>
+        <div class="status-line" style="margin-bottom:10px;">Drop in the branded plan you made — ${esc(client.name.split(' ')[0])} gets a “View My Meal Plan” button in the app.</div>
+        <div id="pdfDrop" style="border:1.5px dashed var(--border); border-radius:12px; padding:18px; text-align:center; cursor:pointer;">
+          ${client.meal_plan_pdf_url
+            ? `<div class="name" style="font-size:13.5px;">📄 ${esc(client.meal_plan_pdf_name || 'Meal Plan.pdf')}</div><a class="btn btn-ghost btn-sm" style="margin-top:10px;" href="${esc(client.meal_plan_pdf_url)}" target="_blank" rel="noopener">View</a>`
+            : '<div class="empty" style="padding:0;">Drop a PDF here, or tap to choose one.</div>'}
+        </div>
+        <input type="file" accept="application/pdf,.pdf" id="pdfInput" style="display:none;">
+        <div class="row2" style="margin-top:10px;">
+          <button type="button" class="btn btn-ghost" id="pdfUploadBtn">${client.meal_plan_pdf_url ? 'Replace PDF' : 'Upload PDF'}</button>
+          ${client.meal_plan_pdf_url ? '<button type="button" class="btn btn-danger" id="pdfRemoveBtn">Remove</button>' : ''}
+        </div>
+        <div class="status-line" id="pdfStatus" style="margin-top:8px; margin-bottom:0;"></div>
+      </div>
+      <div class="card" id="pdfCardW">
+        <label>Workout Plan (PDF)</label>
+        <div class="status-line" style="margin-bottom:10px;">Drop in the branded workout plan you made — ${esc(client.name.split(' ')[0])} gets a “View My Workout Plan” button in the app.</div>
+        <div id="pdfDropW" style="border:1.5px dashed var(--border); border-radius:12px; padding:18px; text-align:center; cursor:pointer;">
+          ${client.workout_plan_pdf_url
+            ? `<div class="name" style="font-size:13.5px;">📄 ${esc(client.workout_plan_pdf_name || 'Workout Plan.pdf')}</div><a class="btn btn-ghost btn-sm" style="margin-top:10px;" href="${esc(client.workout_plan_pdf_url)}" target="_blank" rel="noopener">View</a>`
+            : '<div class="empty" style="padding:0;">Drop a PDF here, or tap to choose one.</div>'}
+        </div>
+        <input type="file" accept="application/pdf,.pdf" id="pdfInputW" style="display:none;">
+        <div class="row2" style="margin-top:10px;">
+          <button type="button" class="btn btn-ghost" id="pdfUploadBtnW">${client.workout_plan_pdf_url ? 'Replace PDF' : 'Upload PDF'}</button>
+          ${client.workout_plan_pdf_url ? '<button type="button" class="btn btn-danger" id="pdfRemoveBtnW">Remove</button>' : ''}
+        </div>
+        <div class="status-line" id="pdfStatusW" style="margin-top:8px; margin-bottom:0;"></div>
+      </div>
+      <div class="card">
+        <label>Check-in history</label>
+        ${rows || '<div class="empty">No check-ins yet.</div>'}
+      </div>
+    `;
+  }
+  const st = statusFor(client);
+  return `
+    <button class="back" id="backBtn">← Back to clients</button>
+    <div class="brand-row" style="margin-bottom:14px;">
+      <div class="avatar" style="width:44px;height:44px;font-size:16px;">${esc(initialsOf(client.name))}</div>
+      <div><h1 style="margin:0;font-size:26px;">${esc(client.name)}</h1>
+      <div class="sub" style="margin:2px 0 0;">${esc(client.phone || 'no phone on file')} · <span class="chip ${st.cls}"><span class="dot"></span>${st.label}</span></div></div>
+    </div>
+    <div class="tab-bar">
+      <button class="tab-btn ${dt==='overview'?'sel':''}" data-dtab="overview">Overview</button>
+      <button class="tab-btn ${dt==='progress'?'sel':''}" data-dtab="progress">Progress</button>
+      <button class="tab-btn ${dt==='billing'?'sel':''}" data-dtab="billing">Billing</button>
+      <button class="tab-btn ${dt==='messages'?'sel':''}" data-dtab="messages">Messages</button>
+    </div>
+    ${body}
+  `;
+}
+/* ================= PROGRESS PHOTO VIEWER (full screen + compare) ================= */
+function fmtPhotoDate(d) {
+  try { return new Date(d + 'T00:00:00').toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' }); }
+  catch (e) { return d; }
+}
+function daysBetween(a, b) {
+  try {
+    const ms = Math.abs(new Date(a + 'T00:00:00') - new Date(b + 'T00:00:00'));
+    return Math.round(ms / 86400000);
+  } catch (e) { return null; }
+}
+function closePhotoViewer() {
+  photoViewerHost.innerHTML = '';
+  document.removeEventListener('keydown', photoViewerKey);
+}
+function photoViewerKey(e) {
+  const host = photoViewerHost.firstElementChild;
+  if (!host) return;
+  if (e.key === 'Escape') { closePhotoViewer(); return; }
+  const cur = host.getAttribute('data-single-idx');
+  if (cur === null || cur === undefined) return;
+  const i = Number(cur);
+  if (e.key === 'ArrowLeft' && i > 0) renderPhotoSingle(i - 1);
+  if (e.key === 'ArrowRight' && i < progressPhotos.length - 1) renderPhotoSingle(i + 1);
+}
+function openPhotoViewer(idx) {
+  document.addEventListener('keydown', photoViewerKey);
+  renderPhotoSingle(idx);
+}
+function renderPhotoSingle(idx) {
+  const p = progressPhotos[idx];
+  if (!p) return;
+  const total = progressPhotos.length;
+  photoViewerHost.innerHTML = `
+    <div class="pv-overlay" data-single-idx="${idx}">
+      <div class="pv-top">
+        <div class="pv-title">Progress Photo · ${idx + 1} of ${total}</div>
+        <div class="pv-actions">
+          ${total >= 2 ? `<button class="pv-btn" id="pvCompareFromSingle">Compare</button>` : ''}
+          <button class="pv-x" data-pv-close aria-label="Close">×</button>
+        </div>
+      </div>
+      <div class="pv-stage" data-pv-close-bg>
+        ${idx > 0 ? `<button class="pv-nav prev" id="pvPrev" aria-label="Previous">‹</button>` : ''}
+        <img src="${p.storage_path}" alt="progress photo ${p.date}">
+        ${idx < total - 1 ? `<button class="pv-nav next" id="pvNext" aria-label="Next">›</button>` : ''}
+      </div>
+      <div class="pv-caption"><b>${fmtPhotoDate(p.date)}</b>${p.note ? ' · ' + esc(p.note) : ''}</div>
+    </div>`;
+  photoViewerHost.querySelectorAll('[data-pv-close]').forEach(el => el.addEventListener('click', closePhotoViewer));
+  const bg = photoViewerHost.querySelector('[data-pv-close-bg]');
+  if (bg) bg.addEventListener('click', e => { if (e.target === bg) closePhotoViewer(); });
+  const prev = document.getElementById('pvPrev');
+  if (prev) prev.addEventListener('click', () => renderPhotoSingle(idx - 1));
+  const next = document.getElementById('pvNext');
+  if (next) next.addEventListener('click', () => renderPhotoSingle(idx + 1));
+  const cmp = document.getElementById('pvCompareFromSingle');
+  if (cmp) cmp.addEventListener('click', () => {
+    // compare this photo against the next-oldest one by default (or the previous if it's the oldest)
+    const other = idx < total - 1 ? idx + 1 : idx - 1;
+    openCompare(idx, other);
+  });
+}
+function openCompare(a, b) {
+  const pa = progressPhotos[a], pb = progressPhotos[b];
+  if (!pa || !pb) return;
+  // show older on the left, newer on the right
+  let left = pa, right = pb;
+  if (new Date(pa.date) > new Date(pb.date)) { left = pb; right = pa; }
+  const gap = daysBetween(left.date, right.date);
+  const gapTxt = gap != null && gap > 0 ? `<span class="delta">+${gap} day${gap === 1 ? '' : 's'} apart</span>` : '';
+  document.addEventListener('keydown', photoViewerKey);
+  photoViewerHost.innerHTML = `
+    <div class="pv-overlay">
+      <div class="pv-top">
+        <div class="pv-title">Compare</div>
+        <div class="pv-actions">
+          <button class="pv-x" data-pv-close aria-label="Close">×</button>
+        </div>
+      </div>
+      <div class="pv-compare">
+        <div class="pv-pane">
+          <div class="pv-img-wrap"><img src="${left.storage_path}" alt="progress photo ${left.date}"></div>
+          <div class="pv-pane-cap"><b>${fmtPhotoDate(left.date)}</b><br>Earlier</div>
+        </div>
+        <div class="pv-pane">
+          <div class="pv-img-wrap"><img src="${right.storage_path}" alt="progress photo ${right.date}"></div>
+          <div class="pv-pane-cap"><b>${fmtPhotoDate(right.date)}</b><br>Later ${gapTxt}</div>
+        </div>
+      </div>
+      <div class="pv-caption">Tap the ✕ to close · pick two dates from the strip to compare others.</div>
+    </div>`;
+  photoViewerHost.querySelectorAll('[data-pv-close]').forEach(el => el.addEventListener('click', closePhotoViewer));
+}
+function resetCompareMode() {
+  compareSelect = null;
+  const btn = document.getElementById('comparePhotosBtn');
+  if (btn) btn.textContent = 'Compare';
+  const hint = document.getElementById('photoHint');
+  if (hint) hint.textContent = 'Tap a photo to view it full screen.';
+  document.querySelectorAll('[data-photo-idx]').forEach(el => el.classList.remove('cmp-pick', 'cmp-chosen'));
+}
+function wirePhotos() {
+  const imgs = document.querySelectorAll('[data-photo-idx]');
+  if (!imgs.length) return;
+  const cmpBtn = document.getElementById('comparePhotosBtn');
+  const hint = document.getElementById('photoHint');
+  if (cmpBtn) cmpBtn.addEventListener('click', () => {
+    if (compareSelect === null) {
+      compareSelect = [];
+      cmpBtn.textContent = 'Cancel';
+      if (hint) hint.textContent = 'Select two photos to compare.';
+      document.querySelectorAll('[data-photo-idx]').forEach(el => el.classList.add('cmp-pick'));
+    } else {
+      resetCompareMode();
+    }
+  });
+  imgs.forEach(el => {
+    el.addEventListener('click', () => {
+      const idx = Number(el.getAttribute('data-photo-idx'));
+      if (compareSelect === null) { openPhotoViewer(idx); return; }
+      const pos = compareSelect.indexOf(idx);
+      if (pos >= 0) { compareSelect.splice(pos, 1); el.classList.remove('cmp-chosen'); if (hint) hint.textContent = 'Select two photos to compare.'; return; }
+      if (compareSelect.length >= 2) return;
+      compareSelect.push(idx);
+      el.classList.add('cmp-chosen');
+      if (compareSelect.length === 1 && hint) hint.textContent = '1 selected · pick one more.';
+      if (compareSelect.length === 2) {
+        const pair = compareSelect.slice();
+        resetCompareMode();
+        openCompare(pair[0], pair[1]);
+      }
+    });
+  });
+}
+
+function wireDetail() {
+  document.getElementById('backBtn').addEventListener('click', () => { view.screen = 'roster'; view.clientId = null; render(); });
+  wirePhotos();
+  document.querySelectorAll('[data-dtab]').forEach(btn => {
+    btn.addEventListener('click', () => { view.detailTab = btn.getAttribute('data-dtab'); msgDraft = ''; render(); });
+  });
+  const copyBtn = document.getElementById('copyBtn');
+  if (copyBtn) copyBtn.addEventListener('click', () => {
+    const el = document.getElementById('inviteInput');
+    el.select();
+    navigator.clipboard?.writeText(el.value).catch(() => document.execCommand('copy'));
+    toast('Invite link copied');
+  });
+  const textInviteBtn = document.getElementById('textInviteBtn');
+  if (textInviteBtn) textInviteBtn.addEventListener('click', () => {
+    const client = clients.find(c => c.id === view.clientId);
+    const link = document.getElementById('inviteInput').value;
+    const msg = `Hey ${client.name.split(' ')[0]}! Here's your check-in link: ${link}`;
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const sep = isIOS ? '&' : '?';
+    window.location.href = `sms:${client.phone}${sep}body=${encodeURIComponent(msg)}`;
+  });
+  const saveAssignBtn = document.getElementById('saveAssignBtn');
+  if (saveAssignBtn) saveAssignBtn.addEventListener('click', async () => {
+    const workoutId = document.getElementById('assignWorkout').value || null;
+    const mealId = document.getElementById('assignMeal').value || null;
+    const { error } = await supabase_client.rpc('coach_portal_assign_programs', { p_token: token, p_client_id: view.clientId, p_workout_id: workoutId, p_meal_plan_id: mealId });
+    if (error) { toast('Error: ' + error.message); return; }
+    await render();
+    toast('Programs assigned');
+  });
+  const saveBillBtn = document.getElementById('saveBillBtn');
+  if (saveBillBtn) saveBillBtn.addEventListener('click', async () => {
+    const amount = document.getElementById('bAmount').value;
+    const term = document.getElementById('bTerm').value;
+    const start = document.getElementById('bStart').value;
+    const end = document.getElementById('bEnd').value;
+    if (!amount || !start || !end) { toast('Fill in amount, start, and end date'); return; }
+    const { error } = await supabase_client.rpc('coach_portal_set_billing', { p_token: token, p_client_id: view.clientId, p_term: term, p_amount: Number(amount), p_start: start, p_end: end });
+    if (error) { toast('Error: ' + error.message); return; }
+    await render();
+    toast('Billing saved');
+  });
+  const pdfInput = document.getElementById('pdfInput');
+  const pdfUploadBtn = document.getElementById('pdfUploadBtn');
+  const pdfDrop = document.getElementById('pdfDrop');
+  async function uploadPdfFile(file) {
+    if (!file) return;
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) { toast('Please choose a PDF file'); return; }
+    const st = document.getElementById('pdfStatus'); if (st) st.textContent = 'Uploading…';
+    try {
+      const b64 = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = rej; r.readAsDataURL(file); });
+      const { data, error } = await supabase_client.functions.invoke('set-meal-pdf', { body: { token, client_id: view.clientId, file_base64: b64, file_name: file.name } });
+      if (error || (data && data.error)) { if (st) st.textContent = 'Error: ' + (error ? error.message : data.error); return; }
+      await render();
+      toast('Meal plan PDF uploaded');
+    } catch (e) { if (st) st.textContent = 'Error: ' + (e && e.message ? e.message : String(e)); }
+  }
+  if (pdfUploadBtn) pdfUploadBtn.addEventListener('click', () => pdfInput.click());
+  if (pdfDrop) pdfDrop.addEventListener('click', () => pdfInput.click());
+  if (pdfInput) pdfInput.addEventListener('change', () => uploadPdfFile(pdfInput.files[0]));
+  if (pdfDrop) {
+    ['dragover','dragenter'].forEach(ev => pdfDrop.addEventListener(ev, e => { e.preventDefault(); pdfDrop.style.borderColor = 'var(--accent)'; }));
+    ['dragleave','dragend'].forEach(ev => pdfDrop.addEventListener(ev, e => { e.preventDefault(); pdfDrop.style.borderColor = 'var(--border)'; }));
+    pdfDrop.addEventListener('drop', e => { e.preventDefault(); pdfDrop.style.borderColor = 'var(--border)'; if (e.dataTransfer && e.dataTransfer.files[0]) uploadPdfFile(e.dataTransfer.files[0]); });
+  }
+  const pdfRemoveBtn = document.getElementById('pdfRemoveBtn');
+  if (pdfRemoveBtn) pdfRemoveBtn.addEventListener('click', async () => {
+    if (!confirm('Remove this meal plan PDF?')) return;
+    const { data, error } = await supabase_client.functions.invoke('set-meal-pdf', { body: { token, client_id: view.clientId, remove: true } });
+    if (error || (data && data.error)) { toast('Error removing PDF'); return; }
+    await render();
+    toast('Meal plan PDF removed');
+  });
+  const pdfInputW = document.getElementById('pdfInputW');
+  const pdfUploadBtnW = document.getElementById('pdfUploadBtnW');
+  const pdfDropW = document.getElementById('pdfDropW');
+  async function uploadWorkoutPdfFile(file) {
+    if (!file) return;
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) { toast('Please choose a PDF file'); return; }
+    const st = document.getElementById('pdfStatusW'); if (st) st.textContent = 'Uploading…';
+    try {
+      const b64 = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = rej; r.readAsDataURL(file); });
+      const { data, error } = await supabase_client.functions.invoke('set-workout-pdf', { body: { token, client_id: view.clientId, file_base64: b64, file_name: file.name } });
+      if (error || (data && data.error)) { if (st) st.textContent = 'Error: ' + (error ? error.message : data.error); return; }
+      await render();
+      toast('Workout plan PDF uploaded');
+    } catch (e) { if (st) st.textContent = 'Error: ' + (e && e.message ? e.message : String(e)); }
+  }
+  if (pdfUploadBtnW) pdfUploadBtnW.addEventListener('click', () => pdfInputW.click());
+  if (pdfDropW) pdfDropW.addEventListener('click', () => pdfInputW.click());
+  if (pdfInputW) pdfInputW.addEventListener('change', () => uploadWorkoutPdfFile(pdfInputW.files[0]));
+  if (pdfDropW) {
+    ['dragover','dragenter'].forEach(ev => pdfDropW.addEventListener(ev, e => { e.preventDefault(); pdfDropW.style.borderColor = 'var(--accent)'; }));
+    ['dragleave','dragend'].forEach(ev => pdfDropW.addEventListener(ev, e => { e.preventDefault(); pdfDropW.style.borderColor = 'var(--border)'; }));
+    pdfDropW.addEventListener('drop', e => { e.preventDefault(); pdfDropW.style.borderColor = 'var(--border)'; if (e.dataTransfer && e.dataTransfer.files[0]) uploadWorkoutPdfFile(e.dataTransfer.files[0]); });
+  }
+  const pdfRemoveBtnW = document.getElementById('pdfRemoveBtnW');
+  if (pdfRemoveBtnW) pdfRemoveBtnW.addEventListener('click', async () => {
+    if (!confirm('Remove this workout plan PDF?')) return;
+    const { data, error } = await supabase_client.functions.invoke('set-workout-pdf', { body: { token, client_id: view.clientId, remove: true } });
+    if (error || (data && data.error)) { toast('Error removing PDF'); return; }
+    await render();
+    toast('Workout plan PDF removed');
+  });
+  const msgInput = document.getElementById('msgInput');
+  if (msgInput) msgInput.addEventListener('input', e => { msgDraft = e.target.value; });
+  const sendMsgBtn = document.getElementById('sendMsgBtn');
+  if (sendMsgBtn) sendMsgBtn.addEventListener('click', async () => {
+    if (!msgDraft.trim()) return;
+    const { error } = await supabase_client.rpc('coach_portal_send_message', { p_token: token, p_client_id: view.clientId, p_text: msgDraft.trim() });
+    if (error) { toast('Error: ' + error.message); return; }
+    msgDraft = '';
+    await render();
+  });
+}
+
+boot();
+</script>
+</body>
+</html>
