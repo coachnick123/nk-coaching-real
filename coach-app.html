@@ -61,6 +61,29 @@
   .invite-box input { flex:1; font-family:monospace; font-size:12.5px; background:var(--surface-alt); }
   .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#1a2333; border:1px solid var(--border); color:#fff; padding:12px 20px; border-radius:10px; font-size:13px; font-weight:600; opacity:0; pointer-events:none; transition:opacity 0.2s; z-index:60; max-width:90vw; text-align:center; }
   .toast.show { opacity:1; }
+  /* swipe-to-archive on roster rows */
+  .swipe-wrap { position:relative; overflow:hidden; }
+  .swipe-wrap .roster-row { position:relative; z-index:1; background:var(--surface); transition:transform .18s ease; }
+  .swipe-wrap .roster-row:hover { background:var(--surface-alt); }
+  .swipe-wrap.open .roster-row { transform:translateX(-104px); }
+  .swipe-actions { position:absolute; top:0; right:0; bottom:0; width:104px; display:flex; }
+  .swipe-archive { flex:1; border:none; background:var(--critical); color:#fff; font-weight:700; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; }
+  .roster .swipe-wrap:first-of-type .roster-row { border-top:none; }
+  @media (hover:hover) and (pointer:fine) { .swipe-wrap:hover .roster-row { transform:translateX(-104px); } }
+  .archived-row { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 2px; border-top:1px solid var(--border); }
+  .archived-row:first-of-type { border-top:none; }
+  .archived-row .a-name { font-weight:600; font-size:14px; }
+  .archived-row .a-meta { font-size:12px; color:var(--muted); margin-top:2px; }
+  .archived-actions { display:flex; gap:8px; flex-shrink:0; }
+  /* workout split editor */
+  .we-day { border:1px solid var(--border); border-radius:10px; padding:12px 14px; margin-bottom:10px; background:var(--surface-alt); }
+  .we-day-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; }
+  .we-day-name { font-weight:700; font-size:14px; }
+  .we-ex { display:grid; grid-template-columns:1fr 86px 24px; gap:8px; align-items:center; margin-bottom:6px; }
+  .we-ex input { padding:8px 10px; }
+  .we-cardio { font-size:12px; color:var(--muted); margin-top:6px; }
+  .we-tappable { cursor:pointer; }
+  .we-tappable:hover { background:var(--surface-alt); }
   .status-line { font-size:12.5px; color:var(--muted); margin-bottom:14px; }
   .checkin-item { padding:10px 0; border-top:1px solid var(--border); font-size:13px; }
   .checkin-item:first-child { border-top:none; }
@@ -733,7 +756,7 @@ async function programsScreen() {
   if (!mealDraft) mealDraft = blankMealDraft();
   const { data: workouts } = await supabase_client.rpc('coach_portal_list_workouts', { p_token: token });
   const { data: mealPlans } = await supabase_client.rpc('coach_portal_list_meal_plans', { p_token: token });
-  const wRows = (workouts || []).map(w => `<div class="row"><div><div class="name">${esc(w.name)}${w.business_id === null ? '<span class="stock-badge">Stock</span>' : ''}</div><div class="meta">${esc(w.tag || '')}${w.summary ? ' · ' + esc(w.summary) : ''}</div></div></div>`).join('');
+  const wRows = (workouts || []).map(w => `<div class="row we-tappable" data-edit-workout="${w.id}"><div><div class="name">${esc(w.name)}${w.business_id === null ? '<span class="stock-badge">Stock</span>' : ''}</div><div class="meta">${esc(w.tag || '')}${w.summary ? ' · ' + esc(w.summary) : ''}</div></div><div style="color:var(--muted);font-size:18px;line-height:1;">›</div></div>`).join('');
   const mRows = (mealPlans || []).map(m => `<div class="row"><div><div class="name">${esc(m.name)}${m.business_id === null ? '<span class="stock-badge">Stock</span>' : ''}</div><div class="meta">${[m.target_calories && m.target_calories + ' cal', m.target_protein && m.target_protein + 'p', m.target_fat && m.target_fat + 'f', m.target_carbs && m.target_carbs + 'c'].filter(Boolean).join(' · ')}</div></div></div>`).join('');
 
   const daysHtml = workoutDraft.days.map((d, di) => `
@@ -795,6 +818,7 @@ async function programsScreen() {
     <div class="grid2">
       <div>
         <h2 style="margin-top:0;">Workout Splits</h2>
+        <div class="sub" style="margin-top:-14px;">Tap a split to add, remove, or edit its exercises.</div>
         <div class="card" style="padding:6px 20px;">${wRows || '<div class="empty">None yet.</div>'}</div>
         <div class="card">
           <button type="button" class="btn btn-ghost btn-block" id="aiWorkoutBtn" style="margin-bottom:14px; border-color:var(--accent); color:var(--accent-strong);">✦ Generate a draft with AI</button>
@@ -873,6 +897,7 @@ async function rerenderPrograms() {
 }
 function wirePrograms() {
   wireTabBar();
+  document.querySelectorAll('[data-edit-workout]').forEach(el => el.addEventListener('click', () => openWorkoutEditor(el.getAttribute('data-edit-workout'))));
   const aiwb = document.getElementById('aiWorkoutBtn'); if (aiwb) aiwb.addEventListener('click', () => openAiModal('workout'));
   const aimb = document.getElementById('aiMealBtn'); if (aimb) aimb.addEventListener('click', () => openAiModal('meal'));
   document.getElementById('addDayBtn').addEventListener('click', () => {
@@ -1103,17 +1128,20 @@ function rosterTableHtml() {
   const rows = list.map(c => {
     const st = statusFor(c);
     const isNew = (c.checkin_count || 0) === 0 && c.account_status !== 'active';
-    return `<button class="roster-row" data-open="${c.id}">
-      <div class="cell-client">
-        <div class="avatar">${esc(initialsOf(c.name))}</div>
-        <div class="cell-name">${esc(c.name)}${isNew ? '<span class="newbadge">New</span>' : ''}</div>
-      </div>
-      <div class="cell-weight">${c.latest_weight != null ? Number(c.latest_weight) + ' <span>lb</span>' : '<span style="color:var(--muted)">—</span>'}</div>
-      <div class="cell-trend">${trendCell(c)}</div>
-      <div class="cell-check">${relDate(c.last_checkin_date)}</div>
-      <div><span class="chip ${st.cls}"><span class="dot"></span>${st.label}</span></div>
-      <div class="chev">›</div>
-    </button>`;
+    return `<div class="swipe-wrap" data-swipe="${c.id}">
+      <div class="swipe-actions"><button class="swipe-archive" data-archive="${c.id}" data-name="${escAttr(c.name)}">🗄 Archive</button></div>
+      <button class="roster-row" data-open="${c.id}">
+        <div class="cell-client">
+          <div class="avatar">${esc(initialsOf(c.name))}</div>
+          <div class="cell-name">${esc(c.name)}${isNew ? '<span class="newbadge">New</span>' : ''}</div>
+        </div>
+        <div class="cell-weight">${c.latest_weight != null ? Number(c.latest_weight) + ' <span>lb</span>' : '<span style="color:var(--muted)">—</span>'}</div>
+        <div class="cell-trend">${trendCell(c)}</div>
+        <div class="cell-check">${relDate(c.last_checkin_date)}</div>
+        <div><span class="chip ${st.cls}"><span class="dot"></span>${st.label}</span></div>
+        <div class="chev">›</div>
+      </button>
+    </div>`;
   }).join('');
   return `<div class="roster">
     <div class="roster-head">
@@ -1138,9 +1166,11 @@ function rosterScreen() {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input type="text" id="rosterSearch" placeholder="Search clients…" value="${escAttr(rosterSearch)}" autocomplete="off">
       </div>
+      <button class="btn btn-ghost" id="archivedBtn">🗄 Archived</button>
       <button class="btn btn-ghost" id="importBtn">↥ Import</button>
       <button class="btn btn-primary" id="addClientBtn">+ Add Client</button>
     </div>
+    <div class="sub" style="margin-top:-6px;font-size:12px;">On a phone, swipe a client left to archive. On desktop, hover the row.</div>
     <div class="statgrid">
       <div class="statcard"><div class="l">Total Clients</div><div class="big">${s.total}</div><div class="foot">${s.brandNew} brand new</div></div>
       <div class="statcard good"><div class="l">Checked In</div><div class="big">${s.checkedIn8}<small>/${s.activeCount}</small></div><div class="foot">within the last 8 days</div></div>
@@ -1203,6 +1233,164 @@ function openBulkModal() {
     toast(data + ' client' + (data===1?'':'s') + ' imported');
   });
 }
+/* ===== Workout split editor (add/remove/edit exercises) ===== */
+async function openWorkoutEditor(workoutId) {
+  const { data: w, error } = await supabase_client.rpc('coach_portal_workout_detail', { p_token: token, p_workout_id: workoutId });
+  if (error || !w) { toast('Could not load that split'); return; }
+  renderWorkoutEditor(w);
+}
+function renderWorkoutEditor(w) {
+  const isStock = w.business_id === null;
+  const daysHtml = (w.days || []).map((d, di) => `
+    <div class="we-day" data-day="${d.id}">
+      <div class="we-day-head">
+        <div class="we-day-name">${esc(d.name || ('Day ' + (di + 1)))}</div>
+        ${!isStock ? `<button class="rm-btn" data-rm-day="${d.id}" title="Remove day">✕</button>` : ''}
+      </div>
+      ${(d.exercises || []).map(ex => `
+        <div class="we-ex" data-ex="${ex.id}">
+          <input type="text" data-exn="${ex.id}" value="${escAttr(ex.name || '')}" placeholder="Exercise" ${isStock ? 'disabled' : ''}>
+          <input type="text" class="sets" data-exs="${ex.id}" value="${escAttr(ex.sets_reps || '')}" placeholder="Sets" ${isStock ? 'disabled' : ''}>
+          ${!isStock ? `<button class="rm-btn" data-rm-ex="${ex.id}" title="Remove">✕</button>` : '<span></span>'}
+        </div>`).join('')}
+      ${!isStock ? `<div class="we-ex">
+        <input type="text" data-newex-name="${d.id}" placeholder="+ Add exercise">
+        <input type="text" class="sets" data-newex-sets="${d.id}" placeholder="Sets">
+        <button class="add-line-btn" data-add-ex="${d.id}" style="padding:0 4px;">Add</button>
+      </div>` : ''}
+      ${d.cardio ? `<div class="we-cardio">Cardio: ${esc(d.cardio)}</div>` : ''}
+    </div>`).join('');
+  modalHost.innerHTML = `
+    <div class="modal-overlay" data-close-modal>
+      <div class="modal" style="max-width:560px;">
+        <div class="modal-head"><h2>Edit Split</h2><button class="modal-x" data-close-modal>×</button></div>
+        ${isStock
+          ? `<div class="status-line" style="background:var(--warn-soft);color:var(--warn);padding:8px 12px;border-radius:8px;margin-bottom:12px;">This is a stock split, so it's read-only. Tap <b>Duplicate</b> to make your own editable copy.</div>`
+          : `<div class="status-line" style="margin-bottom:12px;">Changes save automatically. Note: this split is shared by everyone it's assigned to — <b>Duplicate</b> it first to tweak one client's plan without changing the rest.</div>`}
+        <div class="field"><label>Split name</label><input type="text" id="weName" value="${escAttr(w.name || '')}" ${isStock ? 'disabled' : ''}></div>
+        <div class="field"><label>Tag</label><input type="text" id="weTag" value="${escAttr(w.tag || '')}" ${isStock ? 'disabled' : ''}></div>
+        ${!isStock ? `<button class="btn btn-ghost" id="weSaveName" style="margin-bottom:14px;">Save name</button>` : ''}
+        <label>Days &amp; exercises</label>
+        ${daysHtml || '<div class="empty">No days yet.</div>'}
+        ${!isStock ? `<button type="button" class="add-line-btn" id="weAddDay">+ Add day</button>` : ''}
+        <div class="row2" style="margin-top:16px;">
+          <button class="btn btn-ghost btn-block" id="weDuplicate">⎘ Duplicate</button>
+          <button class="btn btn-primary btn-block" id="weDone">Done</button>
+        </div>
+      </div>
+    </div>`;
+  wireModalClose();
+  document.getElementById('weDone').addEventListener('click', async () => { closeModal(); await rerenderPrograms(); });
+  document.getElementById('weDuplicate').addEventListener('click', async () => {
+    const nm = prompt('Name for the new copy:', (w.name || 'Split') + ' (copy)');
+    if (nm === null) return;
+    const { data: newId, error } = await supabase_client.rpc('coach_portal_duplicate_workout', { p_token: token, p_workout_id: w.id, p_new_name: (nm || '').trim() });
+    if (error) { toast('Error: ' + error.message); return; }
+    toast('Duplicated — now editable'); openWorkoutEditor(newId);
+  });
+  if (isStock) return;
+  document.getElementById('weSaveName').addEventListener('click', async () => {
+    const { error } = await supabase_client.rpc('coach_portal_rename_workout', { p_token: token, p_workout_id: w.id, p_name: document.getElementById('weName').value, p_tag: document.getElementById('weTag').value });
+    if (error) { toast('Error: ' + error.message); return; }
+    toast('Saved');
+  });
+  document.getElementById('weAddDay').addEventListener('click', async () => {
+    const nm = prompt('Day name (e.g. Upper A, Push, Legs):', 'Day ' + (((w.days || []).length) + 1));
+    if (nm === null) return;
+    const { error } = await supabase_client.rpc('coach_portal_add_day', { p_token: token, p_workout_id: w.id, p_name: (nm || '').trim() });
+    if (error) { toast('Error: ' + error.message); return; }
+    openWorkoutEditor(w.id);
+  });
+  modalHost.querySelectorAll('[data-add-ex]').forEach(btn => btn.addEventListener('click', async () => {
+    const dayId = btn.getAttribute('data-add-ex');
+    const nameEl = modalHost.querySelector('[data-newex-name="' + dayId + '"]');
+    const setsEl = modalHost.querySelector('[data-newex-sets="' + dayId + '"]');
+    const nm = (nameEl.value || '').trim();
+    if (!nm) { toast('Enter an exercise name'); nameEl.focus(); return; }
+    const { error } = await supabase_client.rpc('coach_portal_add_exercise', { p_token: token, p_day_id: dayId, p_name: nm, p_sets_reps: (setsEl.value || '').trim() });
+    if (error) { toast('Error: ' + error.message); return; }
+    openWorkoutEditor(w.id);
+  }));
+  modalHost.querySelectorAll('[data-rm-ex]').forEach(btn => btn.addEventListener('click', async () => {
+    const { error } = await supabase_client.rpc('coach_portal_remove_exercise', { p_token: token, p_exercise_id: btn.getAttribute('data-rm-ex') });
+    if (error) { toast('Error: ' + error.message); return; }
+    const row = btn.closest('.we-ex'); if (row) row.remove();
+  }));
+  modalHost.querySelectorAll('[data-rm-day]').forEach(btn => btn.addEventListener('click', async () => {
+    if (!confirm('Remove this whole day and its exercises?')) return;
+    const { error } = await supabase_client.rpc('coach_portal_remove_day', { p_token: token, p_day_id: btn.getAttribute('data-rm-day') });
+    if (error) { toast('Error: ' + error.message); return; }
+    openWorkoutEditor(w.id);
+  }));
+  const saveEx = async (el) => {
+    const exId = el.getAttribute('data-exn') || el.getAttribute('data-exs');
+    const nameEl = modalHost.querySelector('[data-exn="' + exId + '"]');
+    const setsEl = modalHost.querySelector('[data-exs="' + exId + '"]');
+    if (!nameEl) return;
+    const { error } = await supabase_client.rpc('coach_portal_update_exercise', { p_token: token, p_exercise_id: exId, p_name: nameEl.value, p_sets_reps: setsEl ? setsEl.value : '' });
+    if (error) toast('Error: ' + error.message);
+  };
+  modalHost.querySelectorAll('[data-exn],[data-exs]').forEach(el => el.addEventListener('change', () => saveEx(el)));
+}
+
+/* ===== Archive clients (swipe) ===== */
+function rerenderRoster() { app.innerHTML = topBar() + `<div class="container">${rosterScreen()}</div>`; wireRoster(); }
+let undoTimer = null;
+function showUndoToast(msg, onUndo) {
+  const t = document.getElementById('toast');
+  clearTimeout(undoTimer);
+  t.innerHTML = esc(msg) + ' <button id="undoBtn" style="margin-left:12px;background:none;border:none;color:var(--accent-strong);font-weight:700;cursor:pointer;font:inherit;">Undo</button>';
+  t.classList.add('show');
+  const b = document.getElementById('undoBtn');
+  if (b) b.addEventListener('click', () => { t.classList.remove('show'); clearTimeout(undoTimer); onUndo(); });
+  undoTimer = setTimeout(() => t.classList.remove('show'), 5000);
+}
+async function archiveClient(id, name) {
+  const { error } = await supabase_client.rpc('coach_portal_remove_client', { p_token: token, p_client_id: id });
+  if (error) { toast('Error: ' + error.message); return; }
+  clients = clients.filter(c => c.id !== id);
+  rerenderRoster();
+  showUndoToast((name || 'Client') + ' archived', async () => {
+    const { error: e2 } = await supabase_client.rpc('coach_portal_restore_client', { p_token: token, p_client_id: id });
+    if (e2) { toast('Error: ' + e2.message); return; }
+    await loadRoster(); rerenderRoster(); toast('Restored');
+  });
+}
+async function openArchivedModal() {
+  const { data, error } = await supabase_client.rpc('coach_portal_archived_clients', { p_token: token });
+  if (error) { toast('Error: ' + error.message); return; }
+  const list = data || [];
+  const rows = list.length ? list.map(c => `
+    <div class="archived-row">
+      <div><div class="a-name">${esc(c.name)}</div><div class="a-meta">${c.checkin_count || 0} check-in${(c.checkin_count === 1) ? '' : 's'}${c.archived_at ? ' · archived ' + relDate(c.archived_at) : ''}</div></div>
+      <div class="archived-actions">
+        <button class="btn btn-ghost" data-restore="${c.id}">Restore</button>
+        <button class="btn btn-danger" data-purge="${c.id}" data-name="${escAttr(c.name)}">Delete</button>
+      </div>
+    </div>`).join('') : '<div class="empty">No archived clients.</div>';
+  modalHost.innerHTML = `
+    <div class="modal-overlay" data-close-modal>
+      <div class="modal" style="max-width:520px;">
+        <div class="modal-head"><h2>Archived Clients</h2><button class="modal-x" data-close-modal>×</button></div>
+        <div class="status-line" style="margin-bottom:12px;">Restore brings a client back to your roster. Delete permanently removes them and all their data — that can't be undone.</div>
+        ${rows}
+      </div>
+    </div>`;
+  wireModalClose();
+  modalHost.querySelectorAll('[data-restore]').forEach(b => b.addEventListener('click', async () => {
+    const { error: e2 } = await supabase_client.rpc('coach_portal_restore_client', { p_token: token, p_client_id: b.getAttribute('data-restore') });
+    if (e2) { toast('Error: ' + e2.message); return; }
+    await loadRoster(); closeModal(); rerenderRoster(); toast('Restored');
+  }));
+  modalHost.querySelectorAll('[data-purge]').forEach(b => b.addEventListener('click', async () => {
+    const nm = b.getAttribute('data-name') || 'this client';
+    if (!confirm('Permanently delete ' + nm + ' and ALL their data? This cannot be undone.')) return;
+    if (!confirm('Last check — really delete ' + nm + ' forever?')) return;
+    const { error: e2 } = await supabase_client.rpc('coach_portal_delete_client', { p_token: token, p_client_id: b.getAttribute('data-purge') });
+    if (e2) { toast('Error: ' + e2.message); return; }
+    toast('Deleted'); openArchivedModal();
+  }));
+}
 function closeModal() { modalHost.innerHTML = ''; }
 function wireModalClose() {
   modalHost.querySelectorAll('[data-close-modal]').forEach(el => {
@@ -1213,6 +1401,7 @@ function wireRoster() {
   wireTabBar();
   document.getElementById('addClientBtn').addEventListener('click', openAddClientModal);
   document.getElementById('importBtn').addEventListener('click', openBulkModal);
+  document.getElementById('archivedBtn')?.addEventListener('click', openArchivedModal);
   const searchEl = document.getElementById('rosterSearch');
   searchEl.addEventListener('input', e => {
     rosterSearch = e.target.value;
@@ -1222,8 +1411,57 @@ function wireRoster() {
   wireRosterRows();
 }
 function wireRosterRows() {
-  document.querySelectorAll('[data-open]').forEach(btn => {
-    btn.addEventListener('click', () => { view.screen = 'detail'; view.clientId = btn.getAttribute('data-open'); view.detailTab = 'overview'; render(); });
+  const OPEN = -104;
+  document.querySelectorAll('.swipe-wrap').forEach(wrap => {
+    const row = wrap.querySelector('.roster-row');
+    const id = row.getAttribute('data-open');
+    let startX = 0, startY = 0, dx = 0, dragging = false, decided = false, horizontal = false, moved = false;
+    const base = () => (wrap.classList.contains('open') ? OPEN : 0);
+    const setX = v => { row.style.transform = 'translateX(' + v + 'px)'; };
+    row.addEventListener('touchstart', e => {
+      const t = e.touches[0]; startX = t.clientX; startY = t.clientY;
+      dx = base(); dragging = true; decided = false; horizontal = false; moved = false;
+      row.style.transition = 'none';
+    }, { passive: true });
+    row.addEventListener('touchmove', e => {
+      if (!dragging) return;
+      const t = e.touches[0];
+      const mx = t.clientX - startX, my = t.clientY - startY;
+      if (!decided) {
+        if (Math.abs(mx) < 6 && Math.abs(my) < 6) return;
+        decided = true; horizontal = Math.abs(mx) > Math.abs(my);
+      }
+      if (!horizontal) return;
+      moved = true;
+      dx = Math.max(OPEN, Math.min(0, base() + mx));
+      setX(dx);
+    }, { passive: true });
+    const end = () => {
+      if (!dragging) return;
+      dragging = false;
+      row.style.transition = '';
+      if (horizontal) {
+        const open = dx < OPEN / 2;
+        wrap.classList.toggle('open', open);
+        row.style.transform = '';
+      }
+    };
+    row.addEventListener('touchend', end);
+    row.addEventListener('touchcancel', end);
+    row.addEventListener('click', e => {
+      if (moved || wrap.classList.contains('open')) {
+        e.preventDefault(); moved = false;
+        if (wrap.classList.contains('open')) wrap.classList.remove('open');
+        return;
+      }
+      view.screen = 'detail'; view.clientId = id; view.detailTab = 'overview'; render();
+    });
+  });
+  document.querySelectorAll('[data-archive]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      archiveClient(btn.getAttribute('data-archive'), btn.getAttribute('data-name'));
+    });
   });
 }
 
