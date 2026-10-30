@@ -40,7 +40,11 @@
   .btn:hover { filter:brightness(1.08); }
   .btn-ghost { background:transparent; border-color:var(--border); color:var(--ink); }
   .btn-primary { background:var(--accent); color:#fff; font-weight:700; }
-  .brand-logo { height:40px; width:auto; display:block; }
+  .brand-logo { height:40px; width:auto; display:block; max-width:180px; object-fit:contain; }
+  .brand-mark-circle { height:40px; width:40px; border-radius:11px; background:var(--accent); color:#fff; font-weight:800; font-size:15px; letter-spacing:.5px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .logo-edit { display:flex; align-items:center; gap:12px; }
+  .logo-edit img { height:44px; width:auto; max-width:180px; object-fit:contain; }
+  .logo-edit-btns { display:flex; gap:8px; }
   .btn-sm { padding:8px 12px; font-size:12.5px; width:auto; }
   .btn-block { width:100%; }
   .btn-danger { background:var(--critical-soft); color:var(--critical); border-color:transparent; }
@@ -300,8 +304,33 @@ function applyAccent(accentId) {
   document.documentElement.style.setProperty('--accent', c.base);
   document.documentElement.style.setProperty('--accent-strong', c.strong);
 }
+function fileToLogoDataUri(file, maxDim) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+      const scale = Math.min(1, maxDim / Math.max(w, h));
+      w = Math.max(1, Math.round(w * scale)); h = Math.max(1, Math.round(h * scale));
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      let out = null;
+      try { out = canvas.toDataURL('image/webp', 0.9); } catch (e) {}
+      if (!out || out.indexOf('data:image/webp') !== 0) out = canvas.toDataURL('image/png');
+      resolve(out);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not read image')); };
+    img.src = url;
+  });
+}
 function brandMark() {
-  return `<img class="brand-logo" src="${LOGO_URL}" alt="NT Coaching">`;
+  if (coachInfo && coachInfo.logo_data_uri) {
+    return `<img class="brand-logo" src="${coachInfo.logo_data_uri}" alt="${escAttr((coachInfo.business_name || 'Logo'))}">`;
+  }
+  const ini = (coachInfo && coachInfo.mark_initials) ? coachInfo.mark_initials : initialsOf(coachInfo ? coachInfo.business_name : '');
+  return `<div class="brand-mark-circle">${esc((ini || '?').toUpperCase())}</div>`;
 }
 function initialsOf(name) {
   const parts = (name || '').trim().split(/\s+/);
@@ -506,6 +535,17 @@ function settingsScreen() {
       <div class="field"><label>Tagline</label><input type="text" id="setTagline" value="${escAttr(coachInfo.tagline || '')}" placeholder="Client Portal"></div>
       <div class="field"><label>Logo initials (2-3 letters)</label><input type="text" id="setInitials" maxlength="3" value="${escAttr(coachInfo.mark_initials || 'NK')}"></div>
       <div class="field">
+        <label>Logo image (optional)</label>
+        <div class="logo-edit">
+          <div id="logoPreview"></div>
+          <div class="logo-edit-btns">
+            <label class="btn btn-ghost btn-sm" style="cursor:pointer; margin:0;">Upload<input type="file" id="setLogoFile" accept="image/*" style="display:none;"></label>
+            <button type="button" class="btn btn-ghost btn-sm" id="setLogoRemove">Remove</button>
+          </div>
+        </div>
+        <div class="sub" style="margin-top:6px; font-size:11.5px;">Shown at the top of your coaching app. A PNG with a transparent background looks best. No logo = your initials in a colored circle.</div>
+      </div>
+      <div class="field">
         <label>Accent color</label>
         <div class="accent-swatches">
           ${Object.keys(ACCENT_COLORS).map(id => `<div class="accent-swatch ${accentId===id?'sel':''}" data-accent-id="${id}" style="background:${ACCENT_COLORS[id].base};"></div>`).join('')}
@@ -527,12 +567,33 @@ function wireSettings() {
       applyAccent(selectedAccent);
     });
   });
+  let pendingLogo; // undefined = no change, null = remove, string = new data-uri
+  function renderLogoPreview() {
+    const host = document.getElementById('logoPreview'); if (!host) return;
+    const cur = (pendingLogo === undefined) ? (coachInfo.logo_data_uri || null) : pendingLogo;
+    if (cur) { host.innerHTML = `<img src="${cur}" alt="logo">`; }
+    else { const ini = coachInfo.mark_initials || initialsOf(coachInfo.business_name); host.innerHTML = `<div class="brand-mark-circle">${esc((ini || '?').toUpperCase())}</div>`; }
+  }
+  renderLogoPreview();
+  document.getElementById('setLogoFile').addEventListener('change', async (e) => {
+    const file = e.target.files && e.target.files[0]; if (!file) return;
+    try {
+      const uri = await fileToLogoDataUri(file, 320);
+      if (!uri || uri.length > 300000) { toast('That image is too large — try a smaller or simpler logo'); return; }
+      pendingLogo = uri; renderLogoPreview(); toast('Logo ready — tap Save');
+    } catch (err) { toast('Could not read that image'); }
+  });
+  document.getElementById('setLogoRemove').addEventListener('click', () => {
+    pendingLogo = null; renderLogoPreview(); toast('Logo will be removed on Save');
+  });
   document.getElementById('saveBizBtn').addEventListener('click', async () => {
     const name = document.getElementById('setName').value.trim();
     const tagline = document.getElementById('setTagline').value.trim();
     const initials = document.getElementById('setInitials').value.trim();
     if (!name) { toast('Business name is required'); return; }
-    const { error } = await supabase_client.rpc('coach_portal_update_business', { p_token: token, p_name: name, p_tagline: tagline, p_mark_initials: initials, p_accent_id: selectedAccent });
+    const params = { p_token: token, p_name: name, p_tagline: tagline, p_mark_initials: initials, p_accent_id: selectedAccent };
+    if (pendingLogo !== undefined) params.p_logo_data_uri = (pendingLogo === null ? '' : pendingLogo);
+    const { error } = await supabase_client.rpc('coach_portal_update_business', params);
     if (error) { toast('Error: ' + error.message); return; }
     await render();
     toast('Saved');
