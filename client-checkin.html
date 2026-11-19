@@ -246,6 +246,29 @@
   .likebtn{display:inline-flex;align-items:center;gap:3px;margin:4px 4px 0;font-size:12px;font-weight:700;color:var(--muted);background:none;border:none;cursor:pointer;padding:1px 2px;line-height:1}
   .likebtn .hrt{font-size:14px;line-height:1}
   .likebtn.liked{color:#ff4d6d}
+  .av{width:30px;height:30px;border-radius:50%;object-fit:cover;flex:none}
+  .av.av-ini{display:grid;place-items:center;background:linear-gradient(145deg,var(--accent-2),var(--accent));color:var(--accent-ink);font-weight:800;font-size:12px}
+  .av.big{width:92px;height:92px;font-size:34px}
+  .msgrow{display:flex;gap:8px;align-items:flex-end;max-width:92%}
+  .msgrow.me{align-self:flex-end;flex-direction:row-reverse}
+  .msgrow.them{align-self:flex-start}
+  .msgrow .av{margin-bottom:4px}
+  .likerow{display:flex;align-items:center;gap:2px}
+  .likecount{font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;padding:2px 4px}
+  .lk-ov{position:fixed;inset:0;z-index:250;background:rgba(3,6,12,.7);backdrop-filter:blur(4px);display:flex;align-items:flex-end;justify-content:center}
+  .lk-card{width:100%;max-width:468px;background:var(--bg);border-top-left-radius:20px;border-top-right-radius:20px;border:1px solid var(--line);padding:18px 18px calc(26px + env(safe-area-inset-bottom,0px))}
+  .lk-h{font-family:var(--disp);font-weight:800;font-size:14px;letter-spacing:.4px;text-transform:uppercase;color:var(--accent-2);margin-bottom:12px}
+  .lk-row{display:flex;align-items:center;gap:10px;padding:7px 0;font-size:15px}
+  .lk-empty{color:var(--muted);padding:8px 0}
+  .lk-x{margin-top:14px}
+  .pf-ov{position:fixed;inset:0;z-index:250;background:rgba(3,6,12,.72);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:20px}
+  .pf-card{width:100%;max-width:340px;background:var(--bg);border:1px solid var(--line);border-radius:20px;padding:22px;text-align:center}
+  .pf-h{font-family:var(--disp);font-weight:800;font-size:13px;letter-spacing:1px;text-transform:uppercase;color:var(--accent-2);margin-bottom:14px}
+  .pf-av{display:flex;justify-content:center;margin-bottom:12px}
+  .pf-name{font-size:18px;font-weight:800;margin-bottom:4px}
+  .pf-sub{font-size:12.5px;color:var(--muted);margin-bottom:16px;line-height:1.4}
+  .pf-up{display:block;margin-bottom:10px;cursor:pointer}
+  .pf-rm{background:none;border:none;color:#ff6b6b;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:12px}
   .inrow{display:flex;gap:9px}.inrow input{flex:1}
   .inrow .btn{width:46px;flex:none;padding:0;height:48px;display:grid;place-items:center}
   .inrow .btn svg{width:19px;height:19px}
@@ -296,8 +319,57 @@
   const app = document.getElementById('app');
   const toastEl = document.getElementById('toast');
   let code = null;   // the invite code is now obtained from whoami() AFTER login, never from the URL
-  let me=null, plan=null, demos={}, view={tab:'plan'};
+  let me=null, plan=null, demos={}, view={tab:'plan'}, myProfile={};
   let ci={strength:0,hunger:0,energy:0};
+  function avatarEl(url,name,cls){
+    const ini=(String(name||'?').trim()[0]||'?').toUpperCase();
+    return url?`<img class="av ${cls||''}" src="${esc(url)}" alt="">`:`<div class="av av-ini ${cls||''}">${esc(ini)}</div>`;
+  }
+  function showLikers(names){
+    names=Array.isArray(names)?names:[];
+    const host=document.createElement('div');host.className='lk-ov';
+    host.innerHTML=`<div class="lk-card"><div class="lk-h">Liked by</div>${names.length?names.map(n=>`<div class="lk-row">${avatarEl(null,n)}<span>${esc(n)}</span></div>`).join(''):'<div class="lk-empty">No likes yet</div>'}<button class="btn lk-x">Close</button></div>`;
+    host.addEventListener('click',e=>{if(e.target===host||e.target.closest('.lk-x'))host.remove();});
+    document.body.appendChild(host);
+  }
+  function fileToAvatar(file,cb){
+    const r=new FileReader();
+    r.onload=()=>{const img=new Image();img.onload=()=>{
+      const S=200,c=document.createElement('canvas');c.width=S;c.height=S;const x=c.getContext('2d');
+      const sz=Math.min(img.width,img.height),sx=(img.width-sz)/2,sy=(img.height-sz)/2;
+      x.drawImage(img,sx,sy,sz,sz,0,0,S,S);
+      let out;try{out=c.toDataURL('image/webp',0.85);}catch(e){out=c.toDataURL('image/jpeg',0.85);}
+      cb(out);
+    };img.onerror=()=>cb(null);img.src=r.result;};
+    r.onerror=()=>cb(null);r.readAsDataURL(file);
+  }
+  function openProfile(){
+    const host=document.createElement('div');host.className='pf-ov';
+    const drawPf=()=>{host.innerHTML=`<div class="pf-card">
+      <div class="pf-h">Your profile</div>
+      <div class="pf-av">${avatarEl(myProfile.avatar_data_uri,me.name,'big')}</div>
+      <div class="pf-name">${esc(me.name||'')}</div>
+      <div class="pf-sub">This photo shows next to your messages in the group chat.</div>
+      <label class="btn pf-up">Change photo<input type="file" accept="image/*" id="pfFile" style="display:none"></label>
+      ${myProfile.avatar_data_uri?'<button class="pf-rm" id="pfRemove">Remove photo</button>':''}
+      <button class="btn ghost pf-close" id="pfClose">Done</button>
+    </div>`;
+      host.querySelector('#pfClose').onclick=()=>{host.remove();render();};
+      const rm=host.querySelector('#pfRemove');
+      if(rm)rm.onclick=async()=>{try{await rpc('client_portal_set_avatar',{p_code:code,p_data:''});myProfile.avatar_data_uri=null;drawPf();}catch(e){toast('Could not remove');}};
+      host.querySelector('#pfFile').onchange=e=>{
+        const f=e.target.files[0];if(!f)return;
+        fileToAvatar(f,async(uri)=>{
+          if(!uri){toast('Could not read that image');return;}
+          if(uri.length>400000){toast('That image is a bit large — try a smaller one');return;}
+          try{await rpc('client_portal_set_avatar',{p_code:code,p_data:uri});myProfile.avatar_data_uri=uri;drawPf();toast('Photo updated ✅');}catch(e2){toast('Could not save photo');}
+        });
+      };
+    };
+    drawPf();
+    host.addEventListener('click',e=>{if(e.target===host){host.remove();render();}});
+    document.body.appendChild(host);
+  }
   let logMode='workout';
   let cq={}, checkinQs=[];
   let cmpSel=[], photoList=[];
@@ -494,6 +566,7 @@
     try{ plan=await rpc('client_portal_plan',{p_code:code}); }catch(e){ plan=null; }
     try{ const ds=await rpc('client_portal_demos',{p_code:code}); demos={}; (ds||[]).forEach(d=>{ demos[String(d.name||'').trim().toLowerCase()]=d.url; }); }catch(e){ demos={}; }
     try{ checkinQs=await rpc('client_portal_checkin_questions',{p_code:code})||[]; }catch(e){ checkinQs=[]; }
+    try{ myProfile=await rpc('client_portal_profile',{p_code:code})||{}; }catch(e){ myProfile={}; }
     render();
     maybeShowTour();
   }
@@ -509,7 +582,7 @@
     return `<div class="top"><div class="wrap">
       ${mark}
       <div><div class="biz">${esc(me.business_name||'Coaching')}</div><div class="hi">Hey ${esc(first)}</div></div>
-      <div class="topr">${stat}<button class="iconbtn" id="tourHelp" aria-label="App tour">${svg(I.help)}</button></div>
+      <div class="topr">${stat}<button class="iconbtn" id="profileBtn" aria-label="Your profile" style="padding:0;overflow:hidden">${avatarEl(myProfile.avatar_data_uri,me.name)}</button><button class="iconbtn" id="tourHelp" aria-label="App tour">${svg(I.help)}</button></div>
     </div></div>`;
   }
   const TABS=[['plan','Plan',I.plan],['wins','Wins',I.trophy],['checkin','Check-In',I.check],['habits','Habits',I.flame],['progress','Progress',I.chart],['workout','Log',I.log],['messages','Coach',I.chat],['community','Group',I.group]];
@@ -824,7 +897,9 @@
     let msgs=[];try{msgs=await rpc('client_portal_messages_v2',{p_code:code});}catch(e){}
     let h=`<div class="chatfull"><div class="chatscroll" id="thread">`;
     if(!msgs.length) h+='<div class="empty" style="border:none;margin:auto">No messages yet — say hi 👋</div>';
-    msgs.forEach(m=>{const mine=m.from_role==='client';h+=`<div class="bubwrap ${mine?'me':'them'}"><div class="bub ${mine?'client':'coach'}">${esc(m.text)}</div><button class="likebtn ${m.liked?'liked':''}" data-like-msg="${m.id}"><span class="hrt">${m.liked?'♥':'♡'}</span>${m.likes?('<span>'+m.likes+'</span>'):''}</button></div>`;});
+    window.__NTdm=msgs;
+    msgs.forEach(m=>{const mine=m.from_role==='client';const nm=mine?(me.name||'You'):(me.business_name||'Coach');
+      h+=`<div class="msgrow ${mine?'me':'them'}">${avatarEl(m.avatar,nm)}<div class="bubwrap ${mine?'me':'them'}"><div class="bub ${mine?'client':'coach'}">${esc(m.text)}</div><div class="likerow"><button class="likebtn ${m.liked?'liked':''}" data-like-msg="${m.id}"><span class="hrt">${m.liked?'♥':'♡'}</span></button>${m.likes?`<span class="likecount" data-likers-msg="${m.id}">${m.likes}</span>`:''}</div></div></div>`;});
     h+=`</div><div class="chatinput"><input id="msg_in" placeholder="Message your coach…"><button class="btn" id="msg_send">${svg(I.send)}</button></div></div>`;
     return h;
   }
@@ -834,7 +909,9 @@
     let posts=[];try{posts=await rpc('client_portal_group_v2',{p_code:code,p_channel:'chat'});}catch(e){}
     let h=`<div class="chatfull"><div class="chatscroll" id="thread">`;
     if(!posts.length) h+='<div class="empty" style="border:none;margin:auto">No posts yet. Start the conversation!</div>';
-    posts.forEach(p=>{const mine=p.author_role==='client';h+=`<div class="bubwrap ${mine?'me':'them'}"><div class="bub ${mine?'client':'coach'}"><div class="who">${esc(p.author_name||(p.author_role==='coach'?'Coach':'Member'))}</div>${esc(p.text)}</div><button class="likebtn ${p.liked?'liked':''}" data-like-post="${p.id}"><span class="hrt">${p.liked?'♥':'♡'}</span>${p.likes?('<span>'+p.likes+'</span>'):''}</button></div>`;});
+    window.__NTgroup=posts;
+    posts.forEach(p=>{const mine=p.author_role==='client';const nm=p.author_name||(p.author_role==='coach'?'Coach':'Member');
+      h+=`<div class="msgrow ${mine?'me':'them'}">${avatarEl(p.avatar,nm)}<div class="bubwrap ${mine?'me':'them'}"><div class="bub ${mine?'client':'coach'}"><div class="who">${esc(nm)}</div>${esc(p.text)}</div><div class="likerow"><button class="likebtn ${p.liked?'liked':''}" data-like-post="${p.id}"><span class="hrt">${p.liked?'♥':'♡'}</span></button>${p.likes?`<span class="likecount" data-likers-post="${p.id}">${p.likes}</span>`:''}</div></div></div>`;});
     h+=`</div><div class="chatinput"><input id="grp_in" placeholder="Post to the group…"><button class="btn" id="grp_send">${svg(I.send)}</button></div></div>`;
     return h;
   }
@@ -913,6 +990,7 @@
   function wire(){
     document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{view.tab=b.getAttribute('data-tab');ci={strength:0,hunger:0,energy:0};cq={};window.scrollTo(0,0);render();});
     const th=document.getElementById('tourHelp'); if(th) th.onclick=startTour;
+    const pb0=document.getElementById('profileBtn'); if(pb0) pb0.onclick=openProfile;
     document.querySelectorAll('[data-logmode]').forEach(b=>b.onclick=()=>{logMode=b.getAttribute('data-logmode');render();});
     const fda=document.getElementById('fd_add');
     if(fda) fda.onclick=async()=>{
@@ -986,6 +1064,9 @@
       gs.onclick=go;input.onkeydown=e=>{if(e.key==='Enter')go();};}
     const thrEl=document.getElementById('thread');
     if(thrEl)thrEl.addEventListener('click',async e=>{
+      const lcp=e.target.closest('[data-likers-post]'), lcm=e.target.closest('[data-likers-msg]');
+      if(lcp){const p=(window.__NTgroup||[]).find(x=>String(x.id)===lcp.getAttribute('data-likers-post'));showLikers(p&&p.likers);return;}
+      if(lcm){const m=(window.__NTdm||[]).find(x=>String(x.id)===lcm.getAttribute('data-likers-msg'));showLikers(m&&m.likers);return;}
       const mb=e.target.closest('[data-like-msg]'), pb=e.target.closest('[data-like-post]');
       if(!mb&&!pb)return;
       try{

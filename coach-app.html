@@ -187,6 +187,17 @@
   .like-btn .hrt { font-size:13px; line-height:1; transition:transform .12s; }
   .like-btn.liked { color:#ff4d6d; }
   .like-btn.liked .hrt { transform:scale(1.15); }
+  .likecount { font-size:11px; font-weight:700; color:var(--muted); cursor:pointer; padding:2px 4px; }
+  .cav { width:30px; height:30px; border-radius:50%; object-fit:cover; flex:none; }
+  .cav.cav-ini { display:grid; place-items:center; background:linear-gradient(145deg,var(--accent-2),var(--accent)); color:var(--on-accent); font-weight:800; font-size:12px; }
+  .cav.big { width:92px; height:92px; font-size:34px; }
+  .msgrow { display:flex; gap:8px; align-items:flex-end; }
+  .msgrow.me { flex-direction:row-reverse; align-self:flex-end; }
+  .msgrow .cav { margin-bottom:4px; }
+  .lk-ov { position:fixed; inset:0; z-index:300; background:rgba(3,6,12,.72); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center; padding:20px; }
+  .lk-card { width:100%; max-width:320px; background:var(--bg,#0a0d13); border:1px solid var(--border,rgba(255,255,255,.1)); border-radius:18px; padding:20px; }
+  .lk-h { font-size:12px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:var(--accent-strong,#5b9bff); margin-bottom:12px; }
+  .lk-row { display:flex; align-items:center; gap:10px; padding:7px 0; font-size:15px; }
   .chat-input-row { display:flex; gap:8px; align-items:center; }
   .chat-input-row input { flex:1; }
   .goal-seg { display:flex; flex-wrap:wrap; gap:6px; }
@@ -344,6 +355,18 @@ function fileToLogoDataUri(file, maxDim) {
     img.src = url;
   });
 }
+let coachProfile = {};
+function cAvatarEl(url, name, cls) {
+  const ini = (String(name || '?').trim()[0] || '?').toUpperCase();
+  return url ? `<img class="cav ${cls || ''}" src="${escAttr(url)}" alt="">` : `<div class="cav cav-ini ${cls || ''}">${esc(ini)}</div>`;
+}
+function showLikers(names) {
+  names = Array.isArray(names) ? names : [];
+  const host = document.createElement('div'); host.className = 'lk-ov';
+  host.innerHTML = `<div class="lk-card"><div class="lk-h">Liked by</div>${names.length ? names.map(n => `<div class="lk-row">${cAvatarEl(null, n)}<span>${esc(n)}</span></div>`).join('') : '<div class="empty">No likes yet</div>'}<button class="btn btn-ghost lk-x" style="margin-top:12px;width:100%;">Close</button></div>`;
+  host.addEventListener('click', e => { if (e.target === host || e.target.closest('.lk-x')) host.remove(); });
+  document.body.appendChild(host);
+}
 function brandMark() {
   if (coachInfo && coachInfo.logo_data_uri) {
     return `<img class="brand-logo" src="${coachInfo.logo_data_uri}" alt="${escAttr((coachInfo.business_name || 'Logo'))}">`;
@@ -469,6 +492,7 @@ async function loadCoachInfo() {
   const { data } = await supabase_client.rpc('coach_portal_lookup', { p_token: token });
   coachInfo = (data && data[0]) || null;
   if (coachInfo) applyAccent(coachInfo.accent_id);
+  try { const { data: pf } = await supabase_client.rpc('coach_portal_profile', { p_token: token }); coachProfile = pf || {}; } catch (e) { coachProfile = {}; }
 }
 async function loadRoster() {
   const { data } = await supabase_client.rpc('coach_portal_roster', { p_token: token });
@@ -547,15 +571,16 @@ async function communityScreen() {
         <div style="margin-top:5px; white-space:pre-wrap;">${esc(p.text)}</div>
       </div>`;
     }
-    return `<div class="bubble-wrap ${isCoach?'me':'them'}" style="max-width:82%;">
+    return `<div class="msgrow ${isCoach?'me':'them'}" style="max-width:88%;">${cAvatarEl(p.avatar, p.author_name || (isCoach?'Coach':'Member'))}<div class="bubble-wrap ${isCoach?'me':'them'}" style="max-width:100%;">
       ${isCoach ? '' : `<div class="bubble-who">${esc(p.author_name)}</div>`}
       <div class="bubble ${isCoach?'coach':'client'}">${esc(p.text)}</div>
       <div style="display:flex; align-items:center; gap:8px; margin-top:2px; padding:0 4px;">
-        <button class="like-btn ${p.liked?'liked':''}" data-like-post="${p.id}"><span class="hrt">${p.liked?'♥':'♡'}</span>${p.likes?('<span>'+p.likes+'</span>'):''}</button>
+        <button class="like-btn ${p.liked?'liked':''}" data-like-post="${p.id}"><span class="hrt">${p.liked?'♥':'♡'}</span></button>${p.likes?`<span class="likecount" data-likers-post="${p.id}">${p.likes}</span>`:''}
         <span style="font-size:10px; color:var(--muted);">${fmtWhen(p.created_at)} · ${del}</span>
       </div>
-    </div>`;
+    </div></div>`;
   }).join('') : `<div class="empty">${isAnnounce ? 'No announcements yet. Post an update — every client sees it in their app.' : 'No messages yet. Say hi to kick off the group.'}</div>`;
+  window.__cGroup = posts;
 
   return `
     <h1>Community</h1>
@@ -602,6 +627,9 @@ function wireCommunity() {
       try { await supabase_client.rpc('coach_portal_toggle_group_like', { p_token: token, p_post_id: el.getAttribute('data-like-post') }); await render(); }
       catch (e) { toast('Error'); }
     });
+  });
+  document.querySelectorAll('[data-likers-post]').forEach(el => {
+    el.addEventListener('click', () => { const p = (window.__cGroup || []).find(x => String(x.id) === el.getAttribute('data-likers-post')); showLikers(p && p.likers); });
   });
 }
 
@@ -676,6 +704,17 @@ async function settingsScreen() {
         </div>
       </div>
       <button class="btn btn-primary" id="saveBizBtn">Save</button>
+    </div>
+    <div class="card">
+      <h2 style="margin-top:0;">Your profile photo</h2>
+      <div class="sub" style="margin-top:-14px;">Shows next to your messages in the group chat and your clients' direct line.</div>
+      <div class="logo-edit">
+        <div id="avPreview"></div>
+        <div class="logo-edit-btns">
+          <label class="btn btn-ghost btn-sm" style="cursor:pointer; margin:0;">Upload<input type="file" id="setAvFile" accept="image/*" style="display:none;"></label>
+          <button type="button" class="btn btn-ghost btn-sm" id="setAvRemove">Remove</button>
+        </div>
+      </div>
     </div>
     <div class="card">
       <h2 style="margin-top:0;">Weekly Check-in Questions</h2>
@@ -757,6 +796,23 @@ function wireSettings() {
   });
   document.getElementById('setLogoRemove').addEventListener('click', () => {
     pendingLogo = null; renderLogoPreview(); toast('Logo will be removed on Save');
+  });
+  function renderAvPreview() { const host = document.getElementById('avPreview'); if (host) host.innerHTML = cAvatarEl(coachProfile.avatar_data_uri, coachInfo.coach_name, 'big'); }
+  renderAvPreview();
+  const avFile = document.getElementById('setAvFile');
+  if (avFile) avFile.addEventListener('change', async (e) => {
+    const file = e.target.files && e.target.files[0]; if (!file) return;
+    try {
+      const uri = await fileToLogoDataUri(file, 200);
+      if (!uri || uri.length > 400000) { toast('That image is too large — try a smaller one'); return; }
+      await supabase_client.rpc('coach_portal_set_avatar', { p_token: token, p_data: uri });
+      coachProfile.avatar_data_uri = uri; renderAvPreview(); toast('Profile photo updated');
+    } catch (err) { toast('Could not save photo'); }
+  });
+  const avRm = document.getElementById('setAvRemove');
+  if (avRm) avRm.addEventListener('click', async () => {
+    try { await supabase_client.rpc('coach_portal_set_avatar', { p_token: token, p_data: '' }); coachProfile.avatar_data_uri = null; renderAvPreview(); toast('Profile photo removed'); }
+    catch (e) { toast('Could not remove'); }
   });
   document.getElementById('saveBizBtn').addEventListener('click', async () => {
     const name = document.getElementById('setName').value.trim();
@@ -2048,12 +2104,15 @@ async function detailScreen() {
     `;
   } else if (dt === 'messages') {
     const { data: msgs } = await supabase_client.rpc('coach_portal_client_messages_v2', { p_token: token, p_client_id: view.clientId });
+    window.__dmMsgs = msgs || [];
     const bubbles = (msgs || []).map(m => {
       const me = m.from_role === 'coach';
-      return `<div class="bubble-wrap ${me?'me':'them'}">`
+      const nm = me ? 'You' : (client.name || 'Client');
+      return `<div class="msgrow ${me?'me':'them'}">${cAvatarEl(m.avatar, nm)}<div class="bubble-wrap ${me?'me':'them'}">`
         + `<div class="bubble ${m.from_role}">${esc(m.text)}</div>`
-        + `<button class="like-btn ${m.liked?'liked':''}" data-like-msg="${m.id}"><span class="hrt">${m.liked?'♥':'♡'}</span>${m.likes?('<span>'+m.likes+'</span>'):''}</button>`
-        + `</div>`;
+        + `<div style="display:flex;align-items:center;gap:6px;">`
+        + `<button class="like-btn ${m.liked?'liked':''}" data-like-msg="${m.id}"><span class="hrt">${m.liked?'♥':'♡'}</span></button>${m.likes?`<span class="likecount" data-likers-msg="${m.id}">${m.likes}</span>`:''}`
+        + `</div></div></div>`;
     }).join('');
     body = `
       <div class="card">
@@ -2566,6 +2625,8 @@ function wireDetail() {
   });
   const dmThread = document.getElementById('dmThread');
   if (dmThread) dmThread.addEventListener('click', async (e) => {
+    const lc = e.target.closest('[data-likers-msg]');
+    if (lc) { const m = (window.__dmMsgs || []).find(x => String(x.id) === lc.getAttribute('data-likers-msg')); showLikers(m && m.likers); return; }
     const b = e.target.closest('[data-like-msg]'); if (!b) return;
     try { await supabase_client.rpc('coach_portal_toggle_message_like', { p_token: token, p_message_id: b.getAttribute('data-like-msg') }); await render(); }
     catch (err) { toast('Error'); }
