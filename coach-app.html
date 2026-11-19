@@ -1018,10 +1018,11 @@ async function programsScreen() {
         <input type="text" data-meal-name="${mi}" value="${escAttr(m.name)}" placeholder="Meal name" style="border:none;background:none;padding:0;font-weight:700;font-size:14px;">
         <button class="rm-btn" data-rm-meal="${mi}">✕</button>
       </div>
-      <div class="row3" style="margin-bottom:8px;">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px;">
         <input type="number" data-meal-cal="${mi}" value="${escAttr(String(m.calories||''))}" placeholder="Cal">
         <input type="number" data-meal-protein="${mi}" value="${escAttr(String(m.protein||''))}" placeholder="Protein g">
         <input type="number" data-meal-carbs="${mi}" value="${escAttr(String(m.carbs||''))}" placeholder="Carbs g">
+        <input type="number" data-meal-fat="${mi}" value="${escAttr(String(m.fat||''))}" placeholder="Fat g">
       </div>
       <input type="text" data-meal-items="${mi}" value="${escAttr(m.items_text||'')}" placeholder="e.g. chicken, rice, broccoli">
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;">
@@ -1098,6 +1099,10 @@ async function programsScreen() {
             <button type="button" class="add-line-btn" id="addMealLineBtn">+ Add meal</button>
             <button type="button" class="add-line-btn" id="autoGenBtn">✦ Auto-generate 4 meals</button>
           </div>
+          <div class="row2" style="margin-top:6px;">
+            <button type="button" class="add-line-btn" id="pastePlanBtn">📋 Paste a plan</button>
+            <button type="button" class="add-line-btn" id="genAllPhotosBtn">✦ Generate all photos</button>
+          </div>
           <label style="margin-top:16px;display:block;">Flexible swaps <span style="font-weight:400;color:var(--muted,#8b8d93);font-size:12px;">(optional — lets clients trade foods)</span></label>
           ${swapsHtml || '<div class="status-line">No swaps yet — add a group like "Protein swaps" so clients can trade foods while keeping macros on target.</div>'}
           <button type="button" class="add-line-btn" id="addSwapGroupBtn" style="margin-top:6px;">+ Add swap group</button>
@@ -1135,6 +1140,7 @@ function syncMealDraftFromDom() {
   document.querySelectorAll('[data-meal-cal]').forEach(el => { mealDraft.meals[+el.getAttribute('data-meal-cal')].calories = el.value; });
   document.querySelectorAll('[data-meal-protein]').forEach(el => { mealDraft.meals[+el.getAttribute('data-meal-protein')].protein = el.value; });
   document.querySelectorAll('[data-meal-carbs]').forEach(el => { mealDraft.meals[+el.getAttribute('data-meal-carbs')].carbs = el.value; });
+  document.querySelectorAll('[data-meal-fat]').forEach(el => { mealDraft.meals[+el.getAttribute('data-meal-fat')].fat = el.value; });
   document.querySelectorAll('[data-meal-items]').forEach(el => { mealDraft.meals[+el.getAttribute('data-meal-items')].items_text = el.value; });
   document.querySelectorAll('[data-meal-recipe]').forEach(el => { mealDraft.meals[+el.getAttribute('data-meal-recipe')].recipe = el.value; });
   document.querySelectorAll('[data-meal-steps]').forEach(el => { mealDraft.meals[+el.getAttribute('data-meal-steps')].steps = el.value.split('\n').map(s => s.trim()).filter(Boolean); });
@@ -1239,6 +1245,10 @@ function wirePrograms() {
     rerenderPrograms();
     toast('Auto-generated 4 meals from your macro targets');
   });
+  const ppBtn = document.getElementById('pastePlanBtn');
+  if (ppBtn) ppBtn.addEventListener('click', () => { syncMealDraftFromDom(); openPastePlanModal(); });
+  const gapBtn = document.getElementById('genAllPhotosBtn');
+  if (gapBtn) gapBtn.addEventListener('click', () => { syncMealDraftFromDom(); genAllMealPhotos(gapBtn); });
   document.getElementById('addSwapGroupBtn').addEventListener('click', () => {
     syncMealDraftFromDom();
     if (!Array.isArray(mealDraft.swaps)) mealDraft.swaps = [];
@@ -1824,6 +1834,189 @@ function sparklineSvg(points, w, h) {
     ${dots}
   </svg>`;
 }
+function parseMealsFromText(text) {
+  const blocks = String(text || '').split(/\n\s*\n/).map(b => b.trim()).filter(Boolean);
+  const out = [];
+  blocks.forEach(block => {
+    const lines = block.split('\n').map(s => s.trim()).filter(Boolean);
+    if (!lines.length) return;
+    let name = lines[0], inlineItems = '';
+    const sep = name.match(/^(.*?)[:\-–—]\s*(.*)$/);
+    if (sep) { name = sep[1].trim(); if (sep[2]) inlineItems = sep[2].trim(); }
+    let work = ' ' + block.replace(/\n/g, ' ') + ' ';
+    const grab = (re) => { const m = work.match(re); if (m) { work = work.replace(re, ' '); return m[1]; } return ''; };
+    const calories = grab(/(\d+(?:\.\d+)?)\s*(?:kcal|cals?|calories)\b/i);
+    const protein = grab(/(\d+(?:\.\d+)?)\s*g?\s*(?:protein|pro|p)\b/i);
+    const carbs = grab(/(\d+(?:\.\d+)?)\s*g?\s*(?:carbs?|carb|c)\b/i);
+    const fat = grab(/(\d+(?:\.\d+)?)\s*g?\s*(?:fat|f)\b/i);
+    const itemLines = [];
+    if (inlineItems) itemLines.push(inlineItems);
+    for (let i = 1; i < lines.length; i++) {
+      const L = lines[i];
+      const stripped = L.replace(/(\d+(?:\.\d+)?)\s*g?\s*(?:kcal|cals?|calories|protein|pro|carbs?|carb|fat|p|c|f)\b/ig, '').replace(/[,·|\-–—]/g, '').trim();
+      if (stripped.length >= 3) itemLines.push(L);
+    }
+    const items = itemLines.join(', ').replace(/\s*,\s*,\s*/g, ', ').trim();
+    if (name) out.push({ name: name.slice(0, 60), items_text: items, calories: calories || '', protein: protein || '', carbs: carbs || '', fat: fat || '' });
+  });
+  return out;
+}
+
+function openPastePlanModal() {
+  const ov = document.createElement('div');
+  ov.className = 'pp-ov';
+  ov.innerHTML = `<style>
+    .pp-ov{position:fixed;inset:0;z-index:300;background:rgba(3,6,12,.72);backdrop-filter:blur(4px);display:flex;align-items:flex-start;justify-content:center;padding:28px 14px;overflow-y:auto}
+    .pp-card{width:100%;max-width:560px;background:var(--bg,#0a0d13);border:1px solid var(--border,rgba(255,255,255,.1));border-radius:18px;padding:20px}
+    .pp-card h3{margin:0 0 4px;font-size:18px}
+    .pp-card .sub{color:var(--muted,#8b95a3);font-size:13px;margin-bottom:12px}
+    .pp-card textarea{width:100%;min-height:150px;background:var(--surface-2,#1b2230);border:1px solid var(--border,rgba(255,255,255,.1));border-radius:10px;color:var(--ink,#eef2f7);padding:12px;font-size:13px;font-family:inherit;resize:vertical}
+    .pp-prev{margin-top:12px;max-height:230px;overflow-y:auto;border:1px solid var(--border,rgba(255,255,255,.08));border-radius:10px}
+    .pp-row{display:grid;grid-template-columns:1.3fr 2fr .5fr .4fr .4fr .4fr;gap:6px;padding:7px 10px;font-size:11.5px;border-bottom:1px solid var(--border,rgba(255,255,255,.06));align-items:center}
+    .pp-row.head{color:var(--muted,#8b95a3);text-transform:uppercase;letter-spacing:.5px;font-size:9.5px;font-weight:800;position:sticky;top:0;background:var(--surface,#141a24)}
+    .pp-acts{display:flex;gap:8px;margin-top:14px}
+    .pp-acts .btn{flex:1}
+    .pp-eg{font-size:11.5px;color:var(--muted,#8b95a3);background:var(--surface-2,#1b2230);border-radius:8px;padding:8px 10px;margin-bottom:10px;white-space:pre-line;line-height:1.5}
+  </style>
+  <div class="pp-card">
+    <h3>Paste a meal plan</h3>
+    <div class="sub">One meal per block, a blank line between them. Keep your own macros — I'll just structure it. Tweak anything after it lands in the builder.</div>
+    <div class="pp-eg">Example:
+Breakfast: 4 eggs, oats, banana
+520 cal, 40P, 60C, 15F
+
+Lunch: chicken, rice, broccoli
+650 cal, 55P, 70C, 14F</div>
+    <textarea id="ppText" placeholder="Paste your meals here…"></textarea>
+    <div class="pp-prev" id="ppPrev"></div>
+    <div class="pp-acts">
+      <button class="btn btn-ghost" id="ppCancel">Cancel</button>
+      <button class="btn btn-primary" id="ppAdd" disabled>Add meals</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+  const ta = ov.querySelector('#ppText'), prev = ov.querySelector('#ppPrev'), addB = ov.querySelector('#ppAdd');
+  let parsed = [];
+  const refresh = () => {
+    parsed = parseMealsFromText(ta.value);
+    if (!parsed.length) { prev.innerHTML = ''; addB.textContent = 'Add meals'; addB.disabled = true; return; }
+    addB.disabled = false; addB.textContent = 'Add ' + parsed.length + ' meal' + (parsed.length === 1 ? '' : 's');
+    prev.innerHTML = '<div class="pp-row head"><div>Meal</div><div>Foods</div><div>Cal</div><div>P</div><div>C</div><div>F</div></div>' +
+      parsed.map(m => `<div class="pp-row"><b>${esc(m.name)}</b><div>${esc(m.items_text || '—')}</div><div>${esc(String(m.calories || '—'))}</div><div>${esc(String(m.protein || '—'))}</div><div>${esc(String(m.carbs || '—'))}</div><div>${esc(String(m.fat || '—'))}</div></div>`).join('');
+  };
+  ta.addEventListener('input', refresh); refresh();
+  const close = () => ov.remove();
+  ov.addEventListener('click', e => { if (e.target === ov) close(); });
+  ov.querySelector('#ppCancel').addEventListener('click', close);
+  addB.addEventListener('click', () => {
+    if (!parsed.length) return;
+    if (!Array.isArray(mealDraft.meals)) mealDraft.meals = [];
+    parsed.forEach(m => mealDraft.meals.push({ name: m.name, calories: m.calories, protein: m.protein, carbs: m.carbs, fat: m.fat, items_text: m.items_text }));
+    const n = parsed.length;
+    close(); rerenderPrograms();
+    toast('Added ' + n + ' meal' + (n === 1 ? '' : 's') + ' — hit "Generate all photos" to add pics');
+  });
+}
+
+async function genAllMealPhotos(btn) {
+  const meals = (mealDraft.meals || []).filter(m => m.name && String(m.name).trim());
+  if (!meals.length) { toast('Add some meals first'); return; }
+  const orig = btn.textContent; btn.disabled = true;
+  let done = 0, fail = 0;
+  for (let i = 0; i < meals.length; i++) {
+    btn.textContent = 'Generating ' + (i + 1) + '/' + meals.length + '…';
+    try {
+      const { data, error } = await supabase_client.functions.invoke('generate-meal-detail', { body: { meal: meals[i] } });
+      if (error || (data && data.error)) { fail++; }
+      else if (data) { if (data.recipe) meals[i].recipe = data.recipe; if (Array.isArray(data.steps) && data.steps.length) meals[i].steps = data.steps; if (data.photo_url) meals[i].photo_url = data.photo_url; done++; }
+    } catch (e) { fail++; }
+  }
+  btn.disabled = false; btn.textContent = orig;
+  rerenderPrograms();
+  toast('Photos added to ' + done + ' meal' + (done === 1 ? '' : 's') + (fail ? (' · ' + fail + ' failed — is your OpenAI key set?') : ''));
+}
+
+function resultsCardHtml(fullName, goal, checkins, photos, logs, habits, isCoach) {
+  const fmtShort = d => { try { return new Date(d + 'T00:00:00').toLocaleDateString([], { month: 'short', day: 'numeric' }); } catch (e) { return d; } };
+  const first = (fullName || 'Your').split(' ')[0];
+  const ci = checkins.filter(c => c.weight != null).slice().sort((a, b) => new Date(a.date) - new Date(b.date));
+  const startW = ci.length ? Number(ci[0].weight) : null;
+  const curW = ci.length ? Number(ci[ci.length - 1].weight) : null;
+  const change = (startW != null && curW != null) ? (curW - startW) : null;
+  const nCheck = checkins.length;
+  const adh = checkins.map(c => c.adherence).filter(v => v != null);
+  const adhAvg = adh.length ? Math.round(adh.reduce((a, b) => a + Number(b), 0) / adh.length) : null;
+  const prs = (logs || []).filter(l => l.is_pr);
+  const nPR = prs.length;
+  const bestStreak = (habits || []).reduce((m, h) => Math.max(m, Number(h.streak) || 0), 0);
+  const firstDate = ci.length ? ci[0].date : (checkins.length ? checkins[checkins.length - 1].date : null);
+  const weeks = firstDate ? Math.max(1, Math.round((Date.now() - new Date(firstDate + 'T00:00:00')) / 6048e5)) : null;
+  const pts = ci.map(c => ({ weight: Number(c.weight), date: c.date }));
+  const ph = (photos || []).slice().sort((a, b) => new Date(a.date) - new Date(b.date));
+  const before = ph.length ? ph[0] : null;
+  const after = ph.length > 1 ? ph[ph.length - 1] : null;
+  const hasBA = before && after && before.storage_path && after.storage_path && before !== after;
+  let heroVal = '—', heroLab = 'Progress', heroSub = '';
+  if (change != null && Math.abs(change) >= 0.1) {
+    const down = change < 0;
+    heroVal = (down ? '−' : '+') + Math.abs(change).toFixed(1);
+    heroLab = down ? 'Pounds down' : 'Pounds gained';
+    heroSub = startW != null ? (startW + ' → ' + curW + ' lb') : '';
+  } else if (curW != null) { heroVal = String(curW); heroLab = 'Current weight (lb)'; }
+  const chips = [];
+  if (nPR > 0) chips.push({ v: nPR, l: nPR === 1 ? 'New PR' : 'New PRs' });
+  if (bestStreak > 0) chips.push({ v: '🔥 ' + bestStreak, l: 'Day streak' });
+  if (nCheck > 0) chips.push({ v: nCheck, l: 'Check-ins' });
+  if (adhAvg != null) chips.push({ v: adhAvg + '%', l: 'Adherence' });
+  const chipsHtml = chips.map(c => `<div class="rz-chip"><div class="rz-chip-v">${c.v}</div><div class="rz-chip-l">${c.l}</div></div>`).join('');
+  const prTop = prs.slice().sort((a, b) => (Number(b.weight) || 0) - (Number(a.weight) || 0)).slice(0, 3);
+  const prHtml = prTop.length ? `<div class="rz-sec"><div class="rz-sec-t">Personal records</div>${prTop.map(p => `<div class="rz-pr"><span>${esc(p.exercise)}</span><span class="rz-pr-v">${p.weight || '—'}${p.weight ? ' lb' : ''} × ${p.reps || '—'}</span></div>`).join('')}</div>` : '';
+  const baHtml = hasBA ? `<div class="rz-sec"><div class="rz-sec-t">Before → Now</div><div class="rz-ba"><figure><img src="${escAttr(before.storage_path)}" alt=""><figcaption>${esc(fmtShort(before.date))}</figcaption></figure><figure><img src="${escAttr(after.storage_path)}" alt=""><figcaption>${esc(fmtShort(after.date))}</figcaption></figure></div></div>` : '';
+  const spark = pts.length >= 2 ? `<div class="rz-sec"><div class="rz-sec-t">Weight trend</div>${sparklineSvg(pts, 320, 90)}</div>` : '';
+  const nothing = (change == null && !nPR && !nCheck && !hasBA);
+  const hint = isCoach ? `<div class="status-line" style="margin-bottom:10px;">📲 Screenshot this card to post ${esc(first)}'s results to your story. It pulls live from their check-ins, PRs, habits and photos.</div>` : '';
+  if (nothing) return `${hint}<div class="card"><div class="empty">No results to show yet — once ${isCoach ? esc(first) + ' has' : 'you have'} a check-in, a logged PR or a progress photo, this card fills in automatically.</div></div>`;
+  const tagline = (change != null && change < 0) ? 'The work is showing. Keep stacking weeks.' : (nPR > 0 ? 'Getting stronger every week.' : 'Consistency is paying off.');
+  return `${hint}
+  <div class="rz-wrap"><div class="rz-card">
+    <style>
+      .rz-wrap{display:flex;justify-content:center}
+      .rz-card{width:100%;max-width:380px;background:radial-gradient(130% 80% at 50% 0%, rgba(10,108,248,.22), transparent 60%), linear-gradient(180deg,#0c1322,#070b12);border:1px solid rgba(91,155,255,.25);border-radius:22px;padding:22px 20px 20px;color:#eef2f7;box-shadow:0 20px 50px -20px #000}
+      .rz-eyebrow{font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:#5b9bff;font-weight:800}
+      .rz-name{font-size:24px;font-weight:900;margin:2px 0 1px}
+      .rz-weeks{font-size:12px;color:#8b95a3;margin-bottom:16px;min-height:14px}
+      .rz-hero{text-align:center;padding:14px 0 10px}
+      .rz-hero-v{font-size:54px;font-weight:900;line-height:1;background:linear-gradient(180deg,#9cc0ff,#0a6cf8);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+      .rz-hero-l{font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:#8b95a3;margin-top:8px;font-weight:700}
+      .rz-hero-s{font-size:13px;color:#c3cbd8;margin-top:3px}
+      .rz-chips{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:14px 0 4px}
+      .rz-chip{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:12px 8px;text-align:center}
+      .rz-chip-v{font-size:21px;font-weight:800}
+      .rz-chip-l{font-size:10px;letter-spacing:.8px;text-transform:uppercase;color:#8b95a3;margin-top:3px;font-weight:700}
+      .rz-sec{margin-top:16px}
+      .rz-sec-t{font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:#5b9bff;font-weight:800;margin-bottom:8px}
+      .rz-pr{display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+      .rz-pr-v{font-weight:800;color:#9cc0ff}
+      .rz-ba{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+      .rz-ba figure{margin:0;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,.1);position:relative}
+      .rz-ba img{width:100%;height:190px;object-fit:cover;display:block}
+      .rz-ba figcaption{font-size:10px;color:#eef2f7;padding:4px 7px;background:rgba(0,0,0,.45);position:absolute;bottom:0;left:0;right:0}
+      .rz-foot{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:18px;padding-top:14px;border-top:1px solid rgba(255,255,255,.08);color:#8b95a3;font-size:11px;letter-spacing:1px;text-transform:uppercase;font-weight:700}
+      .rz-tag{text-align:center;font-size:13px;color:#c3cbd8;margin-top:12px;font-style:italic}
+    </style>
+    <div class="rz-eyebrow">Progress Report</div>
+    <div class="rz-name">${esc(first)}</div>
+    <div class="rz-weeks">${weeks ? (weeks + ' week' + (weeks === 1 ? '' : 's') + ' in') : ''}</div>
+    <div class="rz-hero"><div class="rz-hero-v">${heroVal}</div><div class="rz-hero-l">${heroLab}</div>${heroSub ? `<div class="rz-hero-s">${heroSub}</div>` : ''}</div>
+    ${chipsHtml ? `<div class="rz-chips">${chipsHtml}</div>` : ''}
+    ${spark}
+    ${baHtml}
+    ${prHtml}
+    <div class="rz-tag">${tagline}</div>
+    <div class="rz-foot">▲ NT Coaching</div>
+  </div></div>`;
+}
+
 async function detailScreen() {
   const client = clients.find(c => c.id === view.clientId);
   const dt = view.detailTab;
@@ -1904,6 +2097,14 @@ async function detailScreen() {
         ${logsHtml || '<div class="empty">No workouts logged yet.</div>'}
       </div>
     `;
+  } else if (dt === 'results') {
+    const [{ data: checkins }, { data: photos }, { data: logs }] = await Promise.all([
+      supabase_client.rpc('coach_portal_client_checkins', { p_token: token, p_client_id: view.clientId }),
+      supabase_client.rpc('coach_portal_client_photos', { p_token: token, p_client_id: view.clientId }),
+      supabase_client.rpc('coach_portal_client_workout_logs', { p_token: token, p_client_id: view.clientId })
+    ]);
+    let habitsR = []; try { const { data } = await supabase_client.rpc('coach_portal_list_habits', { p_token: token, p_client_id: view.clientId }); habitsR = data || []; } catch (e) {}
+    body = resultsCardHtml(client.name, client.goal, checkins || [], photos || [], logs || [], habitsR, true);
   } else if (dt === 'habits') {
     const { data: habits } = await supabase_client.rpc('coach_portal_list_habits', { p_token: token, p_client_id: view.clientId });
     const list = habits || [];
@@ -2066,6 +2267,7 @@ async function detailScreen() {
     </div>
     <div class="tab-bar">
       <button class="tab-btn ${dt==='overview'?'sel':''}" data-dtab="overview">Overview</button>
+      <button class="tab-btn ${dt==='results'?'sel':''}" data-dtab="results">Results</button>
       <button class="tab-btn ${dt==='habits'?'sel':''}" data-dtab="habits">Habits</button>
       <button class="tab-btn ${dt==='progress'?'sel':''}" data-dtab="progress">Progress</button>
       <button class="tab-btn ${dt==='billing'?'sel':''}" data-dtab="billing">Billing</button>

@@ -335,7 +335,8 @@
     doc:'<path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8l-5-5z"/><path d="M14 3v5h5"/>',
     send:'<path d="M4 12l16-7-7 16-2.5-6.5L4 12z"/>',
     cal:'<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/>',
-    photo:'<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="1.6"/><path d="M4 18l5-4 4 3 3-2 4 3"/>'
+    photo:'<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="1.6"/><path d="M4 18l5-4 4 3 3-2 4 3"/>',
+    trophy:'<path d="M8 4h8v4a4 4 0 01-8 0V4z"/><path d="M8 6H5a2 2 0 002 3M16 6h3a2 2 0 01-2 3"/><path d="M12 12v4M9 20h6M10 16h4"/>'
   };
   const svg=(p,cls)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" class="${cls||''}">${p}</svg>`;
   const yt=n=>'https://www.youtube.com/results?search_query='+encodeURIComponent(String(n||'').trim()+' proper form technique');
@@ -511,7 +512,7 @@
       <div class="topr">${stat}<button class="iconbtn" id="tourHelp" aria-label="App tour">${svg(I.help)}</button></div>
     </div></div>`;
   }
-  const TABS=[['plan','Plan',I.plan],['checkin','Check-In',I.check],['habits','Habits',I.flame],['progress','Progress',I.chart],['workout','Log',I.log],['messages','Coach',I.chat],['community','Group',I.group]];
+  const TABS=[['plan','Plan',I.plan],['wins','Wins',I.trophy],['checkin','Check-In',I.check],['habits','Habits',I.flame],['progress','Progress',I.chart],['workout','Log',I.log],['messages','Coach',I.chat],['community','Group',I.group]];
   function tabbar(){
     return `<div class="tabbar">${TABS.map(t=>`<button class="tab ${view.tab===t[0]?'sel':''}" data-tab="${t[0]}"><span class="ib">${svg(t[2])}</span>${t[1]}</button>`).join('')}</div>`;
   }
@@ -636,6 +637,81 @@
       <path d="${line}" fill="none" stroke="var(--accent-2)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
       <circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="4.2" fill="var(--accent-2)" stroke="#0a0d13" stroke-width="2.5"/>
     </svg>`;
+  }
+  async function winsView(){
+    let checkins=[],photos=[],logs=[],habits=[];
+    try{checkins=await rpc('client_portal_checkins',{p_code:code})||[];}catch(e){}
+    try{photos=await rpc('client_portal_photos',{p_code:code})||[];}catch(e){}
+    try{logs=await rpc('client_portal_workout_logs',{p_code:code})||[];}catch(e){}
+    try{habits=await rpc('client_portal_habits',{p_code:code})||[];}catch(e){}
+    const ci=checkins.filter(c=>c.weight!=null).slice().sort((a,b)=>new Date(a.date)-new Date(b.date));
+    const startW=ci.length?Number(ci[0].weight):null, curW=ci.length?Number(ci[ci.length-1].weight):null;
+    const change=(startW!=null&&curW!=null)?(curW-startW):null;
+    const nCheck=checkins.length;
+    const adh=checkins.map(c=>c.adherence).filter(v=>v!=null);
+    const adhAvg=adh.length?Math.round(adh.reduce((a,b)=>a+Number(b),0)/adh.length):null;
+    const prs=(logs||[]).filter(l=>l.is_pr); const nPR=prs.length;
+    const bestStreak=(habits||[]).reduce((m,h)=>Math.max(m,Number(h.streak)||0),0);
+    const firstDate=ci.length?ci[0].date:(checkins.length?checkins[checkins.length-1].date:null);
+    const weeks=firstDate?Math.max(1,Math.round((Date.now()-new Date(firstDate+'T00:00:00'))/6048e5)):null;
+    const wser=ci.map(c=>Number(c.weight));
+    const ph=(photos||[]).slice().sort((a,b)=>new Date(a.date)-new Date(b.date));
+    const before=ph.length?ph[0]:null, after=ph.length>1?ph[ph.length-1]:null;
+    const hasBA=before&&after&&before.storage_path&&after.storage_path&&before!==after;
+    const fmtS=d=>{try{return new Date(d+'T00:00:00').toLocaleDateString([],{month:'short',day:'numeric'});}catch(e){return d;}};
+    let heroVal='—',heroLab='Progress',heroSub='';
+    if(change!=null&&Math.abs(change)>=0.1){const down=change<0;heroVal=(down?'−':'+')+Math.abs(change).toFixed(1);heroLab=down?'Pounds down':'Pounds gained';heroSub=startW!=null?(startW+' → '+curW+' lb'):'';}
+    else if(curW!=null){heroVal=String(curW);heroLab='Current weight (lb)';}
+    const chips=[];
+    if(nPR>0)chips.push([''+nPR,nPR===1?'New PR':'New PRs']);
+    if(bestStreak>0)chips.push(['🔥 '+bestStreak,'Day streak']);
+    if(nCheck>0)chips.push([''+nCheck,'Check-ins']);
+    if(adhAvg!=null)chips.push([adhAvg+'%','Adherence']);
+    const prTop=prs.slice().sort((a,b)=>(Number(b.weight)||0)-(Number(a.weight)||0)).slice(0,3);
+    const nothing=(change==null&&!nPR&&!nCheck&&!hasBA);
+    if(nothing) return `<h1>Your Wins</h1><div class="empty">Your results card fills in as you go — log a check-in, hit a PR, or add a progress photo and watch it come to life. 💪</div>`;
+    const tagline=(change!=null&&change<0)?'The work is showing. Keep going.':(nPR>0?'Getting stronger every week.':'Consistency is paying off.');
+    const chipsHtml=chips.map(c=>`<div class="rz-chip"><div class="rz-chip-v">${esc(String(c[0]))}</div><div class="rz-chip-l">${esc(c[1])}</div></div>`).join('');
+    const prHtml=prTop.length?`<div class="rz-sec"><div class="rz-sec-t">Personal records</div>${prTop.map(p=>`<div class="rz-pr"><span>${esc(p.exercise||'')}</span><span class="rz-pr-v">${p.weight||'—'}${p.weight?' lb':''} × ${p.reps||'—'}</span></div>`).join('')}</div>`:'';
+    const baHtml=hasBA?`<div class="rz-sec"><div class="rz-sec-t">Before → Now</div><div class="rz-ba"><figure><img src="${esc(before.storage_path)}" alt=""><figcaption>${esc(fmtS(before.date))}</figcaption></figure><figure><img src="${esc(after.storage_path)}" alt=""><figcaption>${esc(fmtS(after.date))}</figcaption></figure></div></div>`:'';
+    const sparkHtml=wser.length>=2?`<div class="rz-sec"><div class="rz-sec-t">Weight trend</div>${sparkline(wser)}</div>`:'';
+    return `<h1 style="margin-bottom:4px">Your Wins</h1><div class="screensub" style="margin-bottom:14px">Screenshot this to share your progress 📲</div>
+    <div class="rz-card">
+      <style>
+        .rz-card{width:100%;max-width:440px;margin:0 auto;background:radial-gradient(130% 80% at 50% 0%, rgba(10,108,248,.22), transparent 60%), linear-gradient(180deg,#0c1322,#070b12);border:1px solid rgba(91,155,255,.25);border-radius:22px;padding:22px 20px 20px;color:#eef2f7;box-shadow:0 20px 50px -20px #000}
+        .rz-eyebrow{font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:#5b9bff;font-weight:800}
+        .rz-name{font-size:24px;font-weight:900;margin:2px 0 1px}
+        .rz-weeks{font-size:12px;color:#8b95a3;margin-bottom:16px;min-height:14px}
+        .rz-hero{text-align:center;padding:14px 0 10px}
+        .rz-hero-v{font-size:54px;font-weight:900;line-height:1;background:linear-gradient(180deg,#9cc0ff,#0a6cf8);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+        .rz-hero-l{font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:#8b95a3;margin-top:8px;font-weight:700}
+        .rz-hero-s{font-size:13px;color:#c3cbd8;margin-top:3px}
+        .rz-chips{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:14px 0 4px}
+        .rz-chip{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:12px 8px;text-align:center}
+        .rz-chip-v{font-size:21px;font-weight:800}
+        .rz-chip-l{font-size:10px;letter-spacing:.8px;text-transform:uppercase;color:#8b95a3;margin-top:3px;font-weight:700}
+        .rz-sec{margin-top:16px}
+        .rz-sec-t{font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:#5b9bff;font-weight:800;margin-bottom:8px}
+        .rz-pr{display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+        .rz-pr-v{font-weight:800;color:#9cc0ff}
+        .rz-ba{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+        .rz-ba figure{margin:0;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,.1);position:relative}
+        .rz-ba img{width:100%;height:200px;object-fit:cover;display:block}
+        .rz-ba figcaption{font-size:10px;color:#eef2f7;padding:4px 7px;background:rgba(0,0,0,.45);position:absolute;bottom:0;left:0;right:0}
+        .rz-tag{text-align:center;font-size:13px;color:#c3cbd8;margin-top:12px;font-style:italic}
+        .rz-foot{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:18px;padding-top:14px;border-top:1px solid rgba(255,255,255,.08);color:#8b95a3;font-size:11px;letter-spacing:1px;text-transform:uppercase;font-weight:700}
+      </style>
+      <div class="rz-eyebrow">Progress Report</div>
+      <div class="rz-name">${esc((me.name||'You').split(' ')[0])}</div>
+      <div class="rz-weeks">${weeks?(weeks+' week'+(weeks===1?'':'s')+' in'):''}</div>
+      <div class="rz-hero"><div class="rz-hero-v">${esc(heroVal)}</div><div class="rz-hero-l">${esc(heroLab)}</div>${heroSub?`<div class="rz-hero-s">${esc(heroSub)}</div>`:''}</div>
+      ${chipsHtml?`<div class="rz-chips">${chipsHtml}</div>`:''}
+      ${sparkHtml}
+      ${baHtml}
+      ${prHtml}
+      <div class="rz-tag">${esc(tagline)}</div>
+      <div class="rz-foot">▲ ${esc(me.business_name||'NT Coaching')}</div>
+    </div>`;
   }
   async function progressView(){
     let rows=[];try{rows=await rpc('client_portal_checkins',{p_code:code});}catch(e){}
@@ -826,7 +902,7 @@
     const seg=`<h1 class="screen">Log</h1><div class="logseg"><button data-logmode="workout" class="${logMode==='workout'?'sel':''}">🏋️ Workout</button><button data-logmode="food" class="${logMode==='food'?'sel':''}">🍽️ Food</button></div>`;
     return seg + (logMode==='food' ? await foodView() : await workoutView());
   }
-  const views={plan:planView,checkin:checkinView,habits:habitsView,progress:progressView,workout:logTabView,messages:messagesView,community:communityView};
+  const views={plan:planView,wins:winsView,checkin:checkinView,habits:habitsView,progress:progressView,workout:logTabView,messages:messagesView,community:communityView};
   async function render(){
     let inner='';
     try{ inner = await views[view.tab](); }catch(e){ inner='<div class="empty">Something went wrong loading this. Pull to refresh.</div>'; }
